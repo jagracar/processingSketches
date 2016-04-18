@@ -18,6 +18,8 @@ import processing.core.PVector;
 public class OilPaintingSketch extends PApplet {
 	// The picture file name
 	private String pictureFile = "src/oilPainting/picture.jpg";
+	// The directory where the animation frames should be saved
+	private String frameDir = "src/oilPainting/frames/";
 	// The maximum RGB color difference to consider the pixel correctly painted
 	private float[] maxColorDiff = new float[] { 40, 40, 40 };
 	// Compare the oil paint with the original picture
@@ -165,7 +167,7 @@ public class OilPaintingSketch extends PApplet {
 
 				// Save a picture of the final frame
 				if (saveFinalFramePicture) {
-					save("src/oilPainting/oilPaint-" + frameCount + ".png");
+					save(frameDir + "oilPaint-" + frameCount + ".png");
 				}
 
 				// Stop the sketch if we are not making a movie
@@ -233,14 +235,14 @@ public class OilPaintingSketch extends PApplet {
 		} else if (paint) {
 			// Paint the trace step by step or in one go
 			if (drawStepByStep) {
-				trace.paint(step, visitedPixels, canvas);
+				trace.paint(step, visitedPixels, imgWidth, imgHeight, canvas, false);
 				step++;
 
 				if (step == trace.getNSteps()) {
 					newTrace = true;
 				}
 			} else {
-				trace.paint(visitedPixels, canvas);
+				trace.paint(visitedPixels, imgWidth, imgHeight, canvas, false);
 				newTrace = true;
 			}
 
@@ -259,6 +261,7 @@ public class OilPaintingSketch extends PApplet {
 			// Save the frame if we are making a movie
 			if (makeMovie) {
 				saveMovieFrame();
+				frameCounter++;
 			}
 		} else {
 			// Save the frame if we are making a movie
@@ -268,6 +271,7 @@ public class OilPaintingSketch extends PApplet {
 				ellipse(0, 0, 2, 2);
 
 				saveMovieFrame();
+				frameCounter++;
 			}
 		}
 	}
@@ -276,36 +280,38 @@ public class OilPaintingSketch extends PApplet {
 	 * Updates the similar color and bad painted pixel arrays
 	 */
 	public void updatePixelArrays() {
-		// Load the canvas pixels
-		canvas.loadPixels();
-		int nPixels = canvas.pixels.length;
+		// Load the screen pixels
+		loadPixels();
 
 		// Update the arrays
 		nBadPaintedPixels = 0;
 
-		for (int pixel = 0; pixel < nPixels; pixel++) {
-			// Check if the pixel is well painted
-			boolean wellPainted = false;
-			int canvasCol = canvas.pixels[pixel];
+		for (int x = 0; x < imgWidth; x++) {
+			for (int y = 0; y < imgHeight; y++) {
+				// Check if the pixel is well painted
+				boolean wellPainted = false;
+				int pixel = x + y * imgWidth;
+				int canvasCol = pixels[x + y * width];
 
-			if (canvasCol != bgColor) {
-				int originalCol = originalImg.pixels[pixel];
-				int rDiff = abs(((originalCol >> 16) & 0xff) - ((canvasCol >> 16) & 0xff));
-				int gDiff = abs(((originalCol >> 8) & 0xff) - ((canvasCol >> 8) & 0xff));
-				int bDiff = abs((originalCol & 0xff) - (canvasCol & 0xff));
-				wellPainted = (rDiff < maxColorDiff[0]) && (gDiff < maxColorDiff[1]) && (bDiff < maxColorDiff[2]);
-			}
+				if (canvasCol != bgColor) {
+					int originalCol = originalImg.pixels[pixel];
+					int rDiff = abs(((originalCol >> 16) & 0xff) - ((canvasCol >> 16) & 0xff));
+					int gDiff = abs(((originalCol >> 8) & 0xff) - ((canvasCol >> 8) & 0xff));
+					int bDiff = abs((originalCol & 0xff) - (canvasCol & 0xff));
+					wellPainted = (rDiff < maxColorDiff[0]) && (gDiff < maxColorDiff[1]) && (bDiff < maxColorDiff[2]);
+				}
 
-			similarColor[pixel] = wellPainted;
+				similarColor[pixel] = wellPainted;
 
-			if (!wellPainted) {
-				badPaintedPixels[nBadPaintedPixels] = pixel;
-				nBadPaintedPixels++;
+				if (!wellPainted) {
+					badPaintedPixels[nBadPaintedPixels] = pixel;
+					nBadPaintedPixels++;
+				}
 			}
 		}
 
-		// Update the canvas pixels
-		canvas.updatePixels();
+		// Update the screen pixels
+		updatePixels();
 	}
 
 	/**
@@ -333,27 +339,24 @@ public class OilPaintingSketch extends PApplet {
 	 */
 	public void saveMovieFrame() {
 		if (frameCounter % movieFrameRate == 0) {
-			String frameDir = "src/oilPainting/frames/";
+			String fileRootName = frameDir;
 
 			if (frameCounter < 10) {
-				frameDir += "000000";
+				fileRootName += "000000";
 			} else if (frameCounter < 100) {
-				frameDir += "00000";
+				fileRootName += "00000";
 			} else if (frameCounter < 1000) {
-				frameDir += "0000";
+				fileRootName += "0000";
 			} else if (frameCounter < 10000) {
-				frameDir += "000";
+				fileRootName += "000";
 			} else if (frameCounter < 100000) {
-				frameDir += "00";
+				fileRootName += "00";
 			} else if (frameCounter < 1000000) {
-				frameDir += "0";
+				fileRootName += "0";
 			}
 
-			saveFrame(frameDir + frameCounter + ".png");
+			saveFrame(fileRootName + frameCounter + ".png");
 		}
-
-		// Increase the frame counter
-		frameCounter++;
 	}
 
 	/**

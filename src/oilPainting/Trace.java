@@ -198,10 +198,19 @@ public class Trace {
 		// Initialize the colors array
 		colors = new int[nSteps][nBristles];
 
-		// Load the canvas pixels
-		canvas.loadPixels();
-		int width = canvas.width;
-		int height = canvas.height;
+		// Load the canvas or screen pixels
+		int[] pixels = null;
+		int canvasWidth = 0;
+
+		if (canvas != null) {
+			canvas.loadPixels();
+			pixels = canvas.pixels;
+			canvasWidth = canvas.width;
+		} else {
+			applet.loadPixels();
+			pixels = applet.pixels;
+			canvasWidth = applet.width;
+		}
 
 		// Calculate the trace average color and obtain some trace statistics
 		int rAverage = 0;
@@ -212,6 +221,8 @@ public class Trace {
 		int similarColorCounter = 0;
 		int[][] originalColors = new int[nSteps][nBristles];
 		boolean[][] similarColorBool = new boolean[nSteps][nBristles];
+		int width = originalImg.width;
+		int height = originalImg.height;
 
 		for (int step = 0; step < nSteps; step++) {
 			// Move the brush and get the bristles positions
@@ -229,14 +240,14 @@ public class Trace {
 
 					if (x >= 0 && x < width && y >= 0 && y < height) {
 						// Save the canvas color if it's not the background color
-						int pixel = x + y * width;
-						int canvasColor = canvas.pixels[pixel];
+						int canvasColor = pixels[x + y * canvasWidth];
 
 						if (canvasColor != bgColor) {
 							colors[step][bristle] = canvasColor;
 						}
 
 						// Save the original image color
+						int pixel = x + y * width;
 						int originalImgColor = originalImg.pixels[pixel];
 						originalColors[step][bristle] = originalImgColor;
 
@@ -267,8 +278,14 @@ public class Trace {
 			bAverage /= insideCounter;
 		}
 
-		// Update the canvas pixels
-		canvas.updatePixels();
+		// Update the canvas or screen pixels
+		pixels = null;
+
+		if (canvas != null) {
+			canvas.updatePixels();
+		} else {
+			applet.updatePixels();
+		}
 
 		// Reset the brush
 		brush.reset(positions[0]);
@@ -403,27 +420,38 @@ public class Trace {
 	}
 
 	/**
-	 * Paints the trace on the screen and the canvas
+	 * Paints the trace on the canvas and the screen
 	 * 
 	 * @param visitedPixels the visited pixels array
+	 * @param width the image width
+	 * @param height the image height
 	 * @param canvas the canvas buffer
+	 * @param paintOnlyCanvas if true only the canvas will be painted and not the screen
 	 */
-	public void paint(boolean[] visitedPixels, PGraphics canvas) {
+	public void paint(boolean[] visitedPixels, int width, int height, PGraphics canvas, boolean paintOnlyCanvas) {
 		// Check that the trace colors have been initialized
 		if (colors != null) {
 			// Prepare the canvas for drawing
-			canvas.beginDraw();
-			int width = canvas.width;
-			int height = canvas.height;
+			if (canvas != null) {
+				canvas.beginDraw();
+			}
 
 			// Paint the brush step by step
 			for (int step = 0; step < nSteps; step++) {
 				// Check if the alpha value is high enough to paint it on the canvas
 				boolean highAlpha = alphas[step] > MIN_ALPHA;
 
-				// Move the brush and paint it on the canvas
+				// Move the brush
 				brush.update(positions[step], true);
-				brush.paint(colors[step], alphas[step], canvas, highAlpha);
+
+				// Paint the brush
+				if (paintOnlyCanvas) {
+					brush.paintOnCanvas(colors[step], alphas[step], canvas);
+				} else if (canvas != null) {
+					brush.paintOnCanvasAndScreen(colors[step], alphas[step], canvas, highAlpha);
+				} else {
+					brush.paintOnScreen(colors[step], alphas[step]);
+				}
 
 				// Fill the visited pixels array if alpha is high enough
 				if (highAlpha) {
@@ -443,7 +471,9 @@ public class Trace {
 			}
 
 			// Close the canvas
-			canvas.endDraw();
+			if (canvas != null) {
+				canvas.endDraw();
+			}
 
 			// Reset the brush
 			brush.reset(positions[0]);
@@ -451,29 +481,43 @@ public class Trace {
 	}
 
 	/**
-	 * Paints the trace on the screen and the canvas for a given trace step
+	 * Paints the trace on the canvas and the screen for a given trace step
 	 * 
 	 * @param step the step to paint
 	 * @param visitedPixels the visited pixels array
+	 * @param width the image width
+	 * @param height the image height
 	 * @param canvas the canvas buffer
+	 * @param paintOnlyCanvas if true only the canvas will be painted and not the screen
 	 */
-	public void paint(int step, boolean[] visitedPixels, PGraphics canvas) {
+	public void paint(int step, boolean[] visitedPixels, int width, int height, PGraphics canvas,
+			boolean paintOnlyCanvas) {
 		// Check that the trace colors have been initialized
 		if (colors != null) {
 			// Prepare the canvas for drawing
-			canvas.beginDraw();
-			int width = canvas.width;
-			int height = canvas.height;
+			if (canvas != null) {
+				canvas.beginDraw();
+			}
 
 			// Check if the alpha value is high enough to paint it on the canvas
 			boolean highAlpha = alphas[step] > MIN_ALPHA;
 
-			// Move the brush and paint it on the canvas
+			// Move the brush
 			brush.update(positions[step], true);
-			brush.paint(colors[step], alphas[step], canvas, highAlpha);
+
+			// Paint the brush
+			if (paintOnlyCanvas) {
+				brush.paintOnCanvas(colors[step], alphas[step], canvas);
+			} else if (canvas != null) {
+				brush.paintOnCanvasAndScreen(colors[step], alphas[step], canvas, highAlpha);
+			} else {
+				brush.paintOnScreen(colors[step], alphas[step]);
+			}
 
 			// Close the canvas
-			canvas.endDraw();
+			if (canvas != null) {
+				canvas.endDraw();
+			}
 
 			// Fill the visited pixels array if alpha is high enough
 			if (highAlpha) {

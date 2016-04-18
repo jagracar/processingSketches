@@ -67,14 +67,14 @@ public class Bristle {
 	}
 
 	/**
-	 * Paints the bristle on the screen and the canvas
+	 * Paints the bristle on the canvas and the screen
 	 * 
 	 * @param col the color to use
 	 * @param applet the sketch applet
 	 * @param canvas the canvas buffer
 	 * @param paintCanvas true if the bristle should be painted on the canvas buffer
 	 */
-	public void paint(int col, PApplet applet, PGraphics canvas, boolean paintCanvas) {
+	public void paintOnCanvasAndScreen(int col, PApplet applet, PGraphics canvas, boolean paintCanvas) {
 		// Set the stroke color
 		applet.stroke(col);
 
@@ -98,6 +98,52 @@ public class Bristle {
 				canvas.strokeWeight(thickness);
 				canvas.line(previousPos.x, previousPos.y, pos.x, pos.y);
 			}
+
+			previousPos = pos;
+		}
+	}
+
+	/**
+	 * Paints the bristle on the canvas buffer
+	 * 
+	 * @param col the color to use
+	 * @param canvas the canvas buffer
+	 */
+	public void paintOnCanvas(int col, PGraphics canvas) {
+		// Set the stroke color
+		canvas.stroke(col);
+
+		// Paint the bristle elements
+		PVector previousPos = positions[0];
+
+		for (int i = 1; i < nPositions; i++) {
+			PVector pos = positions[i];
+
+			canvas.strokeWeight(thicknesses[i]);
+			canvas.line(previousPos.x, previousPos.y, pos.x, pos.y);
+
+			previousPos = pos;
+		}
+	}
+
+	/**
+	 * Paints the bristle on the screen
+	 * 
+	 * @param col the color to use
+	 * @param applet the sketch applet
+	 */
+	public void paintOnScreen(int col, PApplet applet) {
+		// Set the stroke color
+		applet.stroke(col);
+
+		// Paint the bristle elements
+		PVector previousPos = positions[0];
+
+		for (int i = 1; i < nPositions; i++) {
+			PVector pos = positions[i];
+
+			applet.strokeWeight(thicknesses[i]);
+			applet.line(previousPos.x, previousPos.y, pos.x, pos.y);
 
 			previousPos = pos;
 		}

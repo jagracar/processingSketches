@@ -183,14 +183,52 @@ public class Brush {
 	 * @param canvas the canvas buffer
 	 * @param paintCanvas true if the brush should be painted on the canvas buffer
 	 */
-	public void paint(int[] colors, int alpha, PGraphics canvas, boolean paintCanvas) {
+	public void paintOnCanvasAndScreen(int[] colors, int alpha, PGraphics canvas, boolean paintCanvas) {
 		if (positionsHistory.size() == POSITIONS_FOR_AVERAGE && alpha > 0) {
 			// Shift the alpha value
 			alpha = alpha << 24;
 
 			// Paint the bristles
 			for (int bristle = 0; bristle < nBristles; bristle++) {
-				bristles[bristle].paint((colors[bristle] & 0x00ffffff) | alpha, applet, canvas, paintCanvas);
+				bristles[bristle].paintOnCanvasAndScreen((colors[bristle] & 0x00ffffff) | alpha, applet, canvas,
+						paintCanvas);
+			}
+		}
+	}
+
+	/**
+	 * Paints the brush on the canvas buffer using the provided bristle colors
+	 * 
+	 * @param colors the bristle colors
+	 * @param alpha colors alpha value
+	 * @param canvas the canvas buffer
+	 */
+	public void paintOnCanvas(int[] colors, int alpha, PGraphics canvas) {
+		if (positionsHistory.size() == POSITIONS_FOR_AVERAGE && alpha > 0) {
+			// Shift the alpha value
+			alpha = alpha << 24;
+
+			// Paint the bristles
+			for (int bristle = 0; bristle < nBristles; bristle++) {
+				bristles[bristle].paintOnCanvas((colors[bristle] & 0x00ffffff) | alpha, canvas);
+			}
+		}
+	}
+
+	/**
+	 * Paints the brush on the screen using the provided bristle colors
+	 * 
+	 * @param colors the bristle colors
+	 * @param alpha colors alpha value
+	 */
+	public void paintOnScreen(int[] colors, int alpha) {
+		if (positionsHistory.size() == POSITIONS_FOR_AVERAGE && alpha > 0) {
+			// Shift the alpha value
+			alpha = alpha << 24;
+
+			// Paint the bristles
+			for (int bristle = 0; bristle < nBristles; bristle++) {
+				bristles[bristle].paintOnScreen((colors[bristle] & 0x00ffffff) | alpha, applet);
 			}
 		}
 	}

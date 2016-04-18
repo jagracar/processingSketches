@@ -3,5 +3,10 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="/home/jgracia/admin/eclipse/libs/core.jar"/>
+	<classpathentry kind="lib" path="/home/jgracia/admin/eclipse/libs/gluegen-rt.jar"/>
+	<classpathentry kind="lib" path="/home/jgracia/admin/eclipse/libs/gluegen-rt-natives-linux-amd64.jar"/>
+	<classpathentry kind="lib" path="/home/jgracia/admin/eclipse/libs/video.jar"/>
+	<classpathentry kind="lib" path="/home/jgracia/admin/eclipse/libs/gstreamer-java.jar"/>
+	<classpathentry kind="lib" path="/home/jgracia/admin/eclipse/libs/jna.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
