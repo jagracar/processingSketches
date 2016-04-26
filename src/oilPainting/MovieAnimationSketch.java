@@ -18,41 +18,44 @@ import processing.video.Movie;
  */
 public class MovieAnimationSketch extends PApplet {
 	// The path to the movie that we want to animate
-	private String movieFile = "src/oilPainting/vtest.avi";
+	private final String movieFile = "src/oilPainting/vtest.avi";
 	// The directory where the animation frames should be saved
-	private String frameDir = "src/oilPainting/frames/";
+	private final String frameDir = "src/oilPainting/frames/";
 	// The maximum RGB color difference to consider the pixel correctly painted
-	private float[] maxColorDiff = new float[] { 40, 40, 40 };
+	private final int[] maxColorDiff = new int[] { 40, 40, 40 };
+	// The size reduction factor between the original movie and the final animation
+	private final int sizeReductionFactor = 2;
 	// Compare the animation with the original movie
-	private boolean comparisonMode = false;
+	private final boolean comparisonMode = false;
 	// The smaller brush size allowed
-	private float smallerBrushSize = 4;
+	private final float smallerBrushSize = 4;
 	// The brush size decrement ratio
-	private float brushSizeDecrement = 1.3f;
-	// The maximum bristle length
-	private float maxBristleLength = 12;
-	// The maximum bristle thickness
-	private float maxBristleThickness = 5;
+	private final float brushSizeDecrement = 1.3f;
+	// The maximum number of invalid trajectories allowed before the brush size is reduced
+	private final int maxInvalidTrajectories = 5000;
+	// The maximum number of invalid trajectories allowed for the smaller brush size before the painting is stopped
+	private final int maxInvalidTrajectoriesForSmallerSize = 10000;
 	// The maximum number of invalid traces allowed before the brush size is reduced
-	private int maxInvalidTraces = 250;
+	private final int maxInvalidTraces = 250;
 	// The maximum number of invalid traces allowed for the smaller brush size before the painting is stopped
-	private int maxInvalidTracesForSmallerSize = 350;
+	private final int maxInvalidTracesForSmallerSize = 350;
 	// The trace speed
-	private float traceSpeed = 2;
+	private final float traceSpeed = 2;
 	// The typical trace length, relative to the brush size
-	private float relativeTraceLength = 2.3f;
+	private final float relativeTraceLength = 2.3f;
 	// The minimum trace length allowed
-	private float minTraceLength = 8;
-	// The screen background color
-	private int bgColor = color(255);
+	private final float minTraceLength = 16;
+	// The canvas background color
+	private final int bgColor = color(255);
 
 	// Sketch variables
 	private Movie movie;
 	private PImage frameImg;
 	private int imgWidth;
 	private int imgHeight;
+	private float timeOffset;
 	private PGraphics canvas;
-	private boolean[] similarColor;
+	private boolean[] similarColorPixels;
 	private boolean[] visitedPixels;
 	private int[] badPaintedPixels;
 	private int nBadPaintedPixels;
@@ -69,34 +72,20 @@ public class MovieAnimationSketch extends PApplet {
 	 * Initial sketch setup
 	 */
 	public void setup() {
-		// Make the window resizable
-		surface.setResizable(true);
-
-		// Load the movie
+		// Load the movie that we want to animate
 		movie = new Movie(this, movieFile);
 
-		// Read the first frame to set the frame image dimensions
-		movie.play();
-		movie.pause();
-		movie.read();
-		imgWidth = movie.width / 2;
-		imgHeight = movie.height / 2;
+		// Read the first frame to set the animation frame image dimensions
+		frameImg = getFrameImage(0);
+		imgWidth = frameImg.width / sizeReductionFactor;
+		imgHeight = frameImg.height / sizeReductionFactor;
 
-		// Create the canvas buffer
-		canvas = createGraphics(imgWidth, imgHeight);
-
-		// Create the pixel arrays
-		int nPixels = imgWidth * imgHeight;
-		similarColor = new boolean[nPixels];
-		visitedPixels = new boolean[nPixels];
-		badPaintedPixels = new int[nPixels];
-		nBadPaintedPixels = nPixels;
-
-		for (int i = 0; i < nPixels; i++) {
-			badPaintedPixels[i] = i;
-		}
+		// Get the time offset corresponding to the initial frame
+		timeOffset = movie.time();
 
 		// Resize the sketch window
+		surface.setResizable(true);
+
 		if (comparisonMode) {
 			surface.setSize(2 * imgWidth, imgHeight);
 		} else {
@@ -104,31 +93,44 @@ public class MovieAnimationSketch extends PApplet {
 		}
 
 		// Sketch setup
+		strokeCap(SQUARE);
 		background(bgColor);
+		frameRate(30);
+
+		// Create the canvas buffer
+		canvas = createGraphics(imgWidth, imgHeight);
 
 		// Canvas buffer setup
+		//canvas.noSmooth();
 		canvas.beginDraw();
-		canvas.background(bgColor);
 		canvas.strokeCap(SQUARE);
+		canvas.background(bgColor);
 		canvas.endDraw();
 
-		// Move the video to the frame counter starting position
-		frameImg = null;
-		frameCounter = 0;
-		movie.play();
-		movie.jump(frameCounter / movie.frameRate);
+		// Initialize the pixel arrays
+		int nPixels = imgWidth * imgHeight;
+		similarColorPixels = new boolean[nPixels];
+		visitedPixels = new boolean[nPixels];
+		badPaintedPixels = new int[nPixels];
+		nBadPaintedPixels = nPixels;
+
+		// Set the starting frame
+		frameCounter = 500;
 	}
 
 	/**
 	 * Draw method
 	 */
 	public void draw() {
-		// Wait until there is a new frame image available
-		if (frameImg != null) {
-			// Pause the movie
-			movie.pause();
+		// Get the new frame image
+		frameImg = getFrameImage(frameCounter);
 
-			// Create a new oil paint of that frame image
+		// Check that we obtained the correct frame
+		if (round((movie.time() - timeOffset) * movie.frameRate) == frameCounter) {
+			// Resize the image to the canvas dimensions
+			frameImg.resize(imgWidth, imgHeight);
+
+			// Create an oil paint of the frame image
 			createOilPaint();
 
 			// Draw the result on the screen
@@ -138,114 +140,138 @@ public class MovieAnimationSketch extends PApplet {
 				image(frameImg, imgWidth, 0);
 			}
 
-			// Move to the next movie frame
-			frameImg = null;
+			// Advance to the next movie frame
 			frameCounter++;
-			movie.play();
-			movie.jump(frameCounter / movie.frameRate);
 		}
 	}
 
 	/**
-	 * Executes each time there is a movie event
+	 * Obtains an image of the movie at the frame position
 	 * 
-	 * @param mov the movie that produced the event
+	 * @param frame the frame position
+	 * @return an image of the movie at the frame position
 	 */
-	public void movieEvent(Movie mov) {
-		if (frameImg == null && abs(frameCounter - mov.time() * mov.frameRate) < 0.1) {
-			// Copy the current frame into the frame image
-			mov.read();
-			frameImg = mov.get();
+	public PImage getFrameImage(int frame) {
+		// Move the movie to the given frame position
+		movie.play();
+		movie.jump((frame + 0.5f) / movie.frameRate);
+		movie.pause();
+
+		// Wait until the frame is available
+		while (!movie.available()) {
+			// do nothing
 		}
+
+		// Read the frame
+		movie.read();
+
+		// Return the frame image
+		return movie.get();
 	}
 
 	/**
 	 * Creates an oil paint from the current frame image
 	 */
 	public void createOilPaint() {
-		// Resize the image to have the canvas dimensions
-		frameImg.resize(imgWidth, imgHeight);
-
-		// Load the frame image pixels. This way they will be all the time available
+		// Load the frame image pixels. This way they will be available all the time
 		frameImg.loadPixels();
-
-		// Update the similar color and bad painted pixel arrays
-		updatePixelArrays();
 
 		// Reset the visited pixels array
 		Arrays.fill(visitedPixels, false);
 
 		// Loop until the painting is finished
 		float averageBrushSize = max(smallerBrushSize, sqrt(imgWidth * imgHeight) / 6);
-		Trace trace = null;
-		int nTraces = 0;
-		int invalidTracesCounter = 0;
-		boolean newTrace = true;
-		int startTime = millis();
 		boolean continuePainting = true;
+		int nTraces = 0;
+		int startTime = millis();
 
 		while (continuePainting) {
-			// Create a new trace or paint the current one
-			if (newTrace) {
+			// Update the similar color and bad painted pixel arrays
+			updatePixelArrays();
+
+			// Obtain a new valid trace
+			Trace trace = null;
+			boolean traceNotFound = true;
+			int invalidTrajectoriesCounter = 0;
+			int invalidTracesCounter = 0;
+			PVector startingPosition = new PVector(0, 0);
+
+			while (traceNotFound) {
 				// Check if we should stop painting
-				if (averageBrushSize == smallerBrushSize && invalidTracesCounter > maxInvalidTracesForSmallerSize) {
+				if (averageBrushSize == smallerBrushSize
+						&& (invalidTrajectoriesCounter > maxInvalidTrajectoriesForSmallerSize
+								|| invalidTracesCounter > maxInvalidTracesForSmallerSize)) {
 					println("Frame = " + frameCounter + ", traces = " + nTraces + ", processing time = "
 							+ (millis() - startTime) / 1000.0f + " seconds");
-					continuePainting = false;
+
+					// Stop the inner while loop
+					trace = null;
+					traceNotFound = false;
 				} else {
 					// Change the average brush size if there were too many invalid traces
-					if (averageBrushSize > smallerBrushSize && invalidTracesCounter > maxInvalidTraces) {
+					if (averageBrushSize > smallerBrushSize && (invalidTrajectoriesCounter > maxInvalidTrajectories
+							|| invalidTracesCounter > maxInvalidTraces)) {
 						averageBrushSize = max(smallerBrushSize,
 								min(averageBrushSize / brushSizeDecrement, averageBrushSize - 2));
 
-						// Reset some of the sketch variables
+						// Reset some of the variables
+						invalidTrajectoriesCounter = 0;
 						invalidTracesCounter = 0;
+
+						// Reset the visited pixels array
 						Arrays.fill(visitedPixels, false);
 					}
 
-					// Create new traces until one of them has a valid trajectory
+					// Create new traces until one of them has a valid trajectory or we exceed a number of tries
 					boolean validTrajectory = false;
-					PVector initPosition = new PVector(0, 0);
 					float brushSize = max(smallerBrushSize, averageBrushSize * random(0.95f, 1.05f));
-					int nSteps = (int) max(minTraceLength, relativeTraceLength * brushSize / traceSpeed);
+					int nSteps = (int) (max(minTraceLength, relativeTraceLength * brushSize * random(0.9f, 1.1f))
+							/ traceSpeed);
 
-					while (!validTrajectory) {
+					while (!validTrajectory && invalidTrajectoriesCounter % 500 != 499) {
 						// Create the trace
 						int pixel = badPaintedPixels[floor(random(nBadPaintedPixels))];
-						initPosition.set(pixel % imgWidth, pixel / imgWidth);
-						trace = new Trace(this, initPosition, nSteps, traceSpeed);
+						startingPosition.set(pixel % imgWidth, pixel / imgWidth);
+						trace = new Trace(this, startingPosition, nSteps, traceSpeed);
 
 						// Check if it has a valid trajectory
-						validTrajectory = trace.hasValidTrajectory(similarColor, visitedPixels, imgWidth, imgHeight);
+						validTrajectory = trace.hasValidTrajectory(similarColorPixels, visitedPixels, frameImg);
+
+						// Increase the counter
+						invalidTrajectoriesCounter++;
 					}
 
-					// Create the brush
-					int nBristles = (int) (brushSize * random(1.6f, 1.9f));
-					float bristleLength = min(2 * brushSize, maxBristleLength);
-					float bristleThickness = min(0.8f * brushSize, maxBristleThickness);
-					Brush brush = new Brush(this, initPosition, brushSize, nBristles, bristleLength, bristleThickness);
+					// Check if we have a valid trajectory
+					if (validTrajectory) {
+						// Reset the invalid trajectories counter
+						invalidTrajectoriesCounter = 0;
 
-					// Add the brush to the trace
-					trace.setBrush(brush);
+						// Set the trace brush size
+						trace.setBrushSize(brushSize);
 
-					// Calculate the trace colors and check that painting the trace will improve the painting
-					if (trace.calculateColors(maxColorDiff, similarColor, frameImg, canvas, bgColor)) {
-						// Test passed, the trace is good enough to be painted
-						newTrace = false;
-						nTraces++;
-						invalidTracesCounter = 0;
+						// Calculate the trace colors and check that painting the trace will improve the painting
+						if (trace.calculateColors(maxColorDiff, similarColorPixels, frameImg, canvas, bgColor)) {
+							// Test passed, the trace is good enough to be painted
+							traceNotFound = false;
+							nTraces++;
+						} else {
+							// The trace is not good enough, try again in the next loop
+							invalidTracesCounter++;
+						}
 					} else {
 						// The trace is not good enough, try again in the next loop
+						invalidTrajectoriesCounter++;
 						invalidTracesCounter++;
 					}
 				}
-			} else {
-				// Paint the trace
-				trace.paint(visitedPixels, imgWidth, imgHeight, canvas, true);
-				newTrace = true;
+			}
 
-				// Update the pixel arrays
-				updatePixelArrays();
+			// Check if we should stop painting because there are no more valid traces
+			if (trace == null) {
+				continuePainting = false;
+			} else {
+				// Paint the trace step by step or in one go
+				trace.paint(visitedPixels, imgWidth, imgHeight, canvas, true);
 			}
 		}
 	}
@@ -254,7 +280,7 @@ public class MovieAnimationSketch extends PApplet {
 	 * Updates the similar color and bad painted pixel arrays
 	 */
 	public void updatePixelArrays() {
-		// Load the canvas pixels
+		// Load the canvas buffer pixels
 		canvas.loadPixels();
 		int nPixels = canvas.pixels.length;
 
@@ -264,17 +290,16 @@ public class MovieAnimationSketch extends PApplet {
 		for (int pixel = 0; pixel < nPixels; pixel++) {
 			// Check if the pixel is well painted
 			boolean wellPainted = false;
-			int canvasCol = canvas.pixels[pixel];
+			int paintedCol = canvas.pixels[pixel];
 
-			if (canvasCol != bgColor) {
+			if (paintedCol != bgColor) {
 				int originalCol = frameImg.pixels[pixel];
-				int rDiff = abs(((originalCol >> 16) & 0xff) - ((canvasCol >> 16) & 0xff));
-				int gDiff = abs(((originalCol >> 8) & 0xff) - ((canvasCol >> 8) & 0xff));
-				int bDiff = abs((originalCol & 0xff) - (canvasCol & 0xff));
-				wellPainted = (rDiff < maxColorDiff[0]) && (gDiff < maxColorDiff[1]) && (bDiff < maxColorDiff[2]);
+				wellPainted = abs(((originalCol >> 16) & 0xff) - ((paintedCol >> 16) & 0xff)) < maxColorDiff[0]
+						&& abs(((originalCol >> 8) & 0xff) - ((paintedCol >> 8) & 0xff)) < maxColorDiff[1]
+						&& abs((originalCol & 0xff) - (paintedCol & 0xff)) < maxColorDiff[2];
 			}
 
-			similarColor[pixel] = wellPainted;
+			similarColorPixels[pixel] = wellPainted;
 
 			if (!wellPainted) {
 				badPaintedPixels[nBadPaintedPixels] = pixel;
@@ -282,7 +307,7 @@ public class MovieAnimationSketch extends PApplet {
 			}
 		}
 
-		// Update the canvas pixels
+		// Update the canvas buffer pixels
 		canvas.updatePixels();
 	}
 

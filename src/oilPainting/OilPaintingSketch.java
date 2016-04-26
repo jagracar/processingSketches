@@ -16,65 +16,64 @@ import processing.core.PVector;
  * @author Javier Graciá Carpio (jagracar)
  */
 public class OilPaintingSketch extends PApplet {
-	// The picture file name
-	private String pictureFile = "src/oilPainting/picture.jpg";
-	// The directory where the animation frames should be saved
-	private String frameDir = "src/oilPainting/frames/";
+	// The path to the picture that we want to paint
+	private final String pictureFile = "src/oilPainting/picture.jpg";
+	// The directory where the movie frames should be saved
+	private final String frameDir = "src/oilPainting/frames/";
 	// The maximum RGB color difference to consider the pixel correctly painted
-	private float[] maxColorDiff = new float[] { 40, 40, 40 };
+	private final int[] maxColorDiff = new int[] { 40, 40, 40 };
+	// Use a separate canvas buffer for color mixing (a bit slower)
+	private final boolean useCanvas = true;
 	// Compare the oil paint with the original picture
-	private boolean comparisonMode = false;
+	private final boolean comparisonMode = false;
 	// Show additional debug images
-	private boolean debugMode = false;
+	private final boolean debugMode = false;
 	// Make a movie showing the painting in steps
-	private boolean makeMovie = false;
-	// Draw the traces step by step, or in one go
-	private boolean drawStepByStep = false;
-	// Saves a picture of the final frame
-	private boolean saveFinalFramePicture = false;
+	private final boolean makeMovie = false;
+	// Paint the traces step by step, or in one go
+	private final boolean paintStepByStep = false;
+	// Save a picture of the final frame
+	private final boolean saveFinalFramePicture = false;
 	// The smaller brush size allowed
-	private float smallerBrushSize = 4;
+	private final float smallerBrushSize = 4;
 	// The brush size decrement ratio
-	private float brushSizeDecrement = 1.3f;
-	// The maximum bristle length
-	private float maxBristleLength = 12;
-	// The maximum bristle thickness
-	private float maxBristleThickness = 5;
+	private final float brushSizeDecrement = 1.3f;
+	// The maximum number of invalid trajectories allowed before the brush size is reduced
+	private final int maxInvalidTrajectories = 5000;
+	// The maximum number of invalid trajectories allowed for the smaller brush size before the painting is stopped
+	private final int maxInvalidTrajectoriesForSmallerSize = 10000;
 	// The maximum number of invalid traces allowed before the brush size is reduced
-	private int maxInvalidTraces = 250;
+	private final int maxInvalidTraces = 250;
 	// The maximum number of invalid traces allowed for the smaller brush size before the painting is stopped
-	private int maxInvalidTracesForSmallerSize = 350;
+	private final int maxInvalidTracesForSmallerSize = 350;
 	// The trace speed
-	private float traceSpeed = 2;
+	private final float traceSpeed = 2;
 	// The typical trace length, relative to the brush size
-	private float relativeTraceLength = 2.3f;
+	private final float relativeTraceLength = 2.3f;
 	// The minimum trace length allowed
-	private float minTraceLength = 8;
+	private final float minTraceLength = 16;
 	// The screen and canvas background color
-	private int bgColor = color(255);
+	private final int bgColor = color(255);
 	// The movie frame rate
-	private int movieFrameRate = 20;
+	private final int movieFrameRate = 20;
 
 	// Sketch variables
 	private PImage originalImg;
 	private int imgWidth;
 	private int imgHeight;
 	private PGraphics canvas;
-	private boolean[] similarColor;
+	private boolean[] similarColorPixels;
 	private boolean[] visitedPixels;
 	private int[] badPaintedPixels;
 	private int nBadPaintedPixels;
 	private float averageBrushSize;
+	private boolean continuePainting;
 	private Trace trace;
+	private int traceStep;
 	private int nTraces;
-	private int invalidTracesCounter;
-	private boolean newTrace;
-	private boolean paint;
 	private int startTime;
 	private int lastChangeTime;
 	private int lastChangeFrameCount;
-	private int frameCounter;
-	private int step;
 
 	/**
 	 * Sets the default window size
@@ -87,32 +86,17 @@ public class OilPaintingSketch extends PApplet {
 	 * Initial sketch setup
 	 */
 	public void setup() {
-		// Make the window resizable
-		surface.setResizable(true);
-
 		// Load the image that we want to paint
 		originalImg = loadImage(pictureFile);
 		imgWidth = originalImg.width;
 		imgHeight = originalImg.height;
 
-		// Load the original image pixels. This way they will be all the time available
+		// Load the original image pixels. This way they will be available all the time
 		originalImg.loadPixels();
 
-		// Create canvas buffer
-		canvas = createGraphics(imgWidth, imgHeight);
-
-		// Create the pixel arrays
-		int nPixels = imgWidth * imgHeight;
-		similarColor = new boolean[nPixels];
-		visitedPixels = new boolean[nPixels];
-		badPaintedPixels = new int[nPixels];
-		nBadPaintedPixels = nPixels;
-
-		for (int i = 0; i < nPixels; i++) {
-			badPaintedPixels[i] = i;
-		}
-
 		// Resize the sketch window
+		surface.setResizable(true);
+
 		if (comparisonMode) {
 			surface.setSize(2 * imgWidth, imgHeight);
 		} else if (debugMode) {
@@ -122,50 +106,59 @@ public class OilPaintingSketch extends PApplet {
 		}
 
 		// Sketch setup
-		background(bgColor);
 		strokeCap(SQUARE);
+		background(bgColor);
 		frameRate(2000);
 
-		// Canvas buffer setup
-		canvas.noSmooth();
-		canvas.beginDraw();
-		canvas.background(bgColor);
-		canvas.strokeCap(SQUARE);
-		canvas.endDraw();
+		// Create the canvas buffer
+		canvas = null;
+
+		if (useCanvas) {
+			canvas = createGraphics(imgWidth, imgHeight);
+
+			// Canvas buffer setup
+			canvas.noSmooth();
+			canvas.beginDraw();
+			canvas.strokeCap(SQUARE);
+			canvas.background(bgColor);
+			canvas.endDraw();
+		}
+
+		// Initialize the pixel arrays
+		int nPixels = imgWidth * imgHeight;
+		similarColorPixels = new boolean[nPixels];
+		visitedPixels = new boolean[nPixels];
+		badPaintedPixels = new int[nPixels];
+		nBadPaintedPixels = nPixels;
 
 		// Initialize the rest of the sketch variables
-		averageBrushSize = max(smallerBrushSize, sqrt(imgWidth * imgHeight) / 6);
+		averageBrushSize = max(smallerBrushSize, sqrt(nPixels) / 6.0f);
+		continuePainting = true;
 		trace = null;
+		traceStep = 0;
 		nTraces = 0;
-		invalidTracesCounter = 0;
-		newTrace = true;
-		paint = true;
 		startTime = millis();
 		lastChangeTime = startTime;
 		lastChangeFrameCount = 0;
-		frameCounter = 1;
-		step = 0;
 	}
 
 	/**
 	 * Draw method
 	 */
 	public void draw() {
-		// Create a new trace or paint the current one
-		if (newTrace) {
-			// Check if we should stop painting
-			if (averageBrushSize == smallerBrushSize && invalidTracesCounter > maxInvalidTracesForSmallerSize) {
-				float totalTime = (millis() - startTime) / 1000.0f;
+		// Check that the oil painting simulation didn't finish
+		if (continuePainting) {
+			// Get a new valid trace if we are not painting one already
+			if (trace == null) {
+				trace = getValidTrace();
+				traceStep = 0;
+			}
 
-				println("Total number of painted traces: " + nTraces);
-				println("Average frame rate = " + round(frameCount / totalTime));
-				println("Processing time = " + totalTime + " seconds");
+			// Check if we should stop painting because there are no more valid traces
+			if (trace == null) {
+				continuePainting = false;
 
-				// Stop painting traces
-				newTrace = false;
-				paint = false;
-
-				// Save a picture of the final frame
+				// Save the final frame picture
 				if (saveFinalFramePicture) {
 					save(frameDir + "oilPaint-" + frameCount + ".png");
 				}
@@ -175,8 +168,70 @@ public class OilPaintingSketch extends PApplet {
 					noLoop();
 				}
 			} else {
+				// Paint the trace step by step or in one go
+				if (paintStepByStep) {
+					trace.paintStep(traceStep, visitedPixels, imgWidth, imgHeight, canvas, false);
+					traceStep++;
+
+					// Check if we finished painting the trace
+					if (traceStep == trace.getNSteps()) {
+						trace = null;
+					}
+				} else {
+					trace.paint(visitedPixels, imgWidth, imgHeight, canvas, false);
+					trace = null;
+				}
+
+				// Draw the additional images if necessary
+				if (comparisonMode) {
+					image(originalImg, imgWidth, 0);
+				} else if (debugMode) {
+					drawDebugImages();
+				}
+			}
+		}
+
+		// Save the movie frame
+		if (makeMovie) {
+			saveMovieFrame();
+		}
+	}
+
+	/**
+	 * Obtains a valid trace, ready to be painted. It returns null if there are no more valid traces and the paint can
+	 * be considered finish.
+	 * 
+	 * @return the valid trace
+	 */
+	public Trace getValidTrace() {
+		// Update the similar color and bad painted pixel arrays
+		updatePixelArrays();
+
+		// Obtain a new valid trace
+		Trace trace = null;
+		boolean traceNotFound = true;
+		int invalidTrajectoriesCounter = 0;
+		int invalidTracesCounter = 0;
+		PVector startingPosition = new PVector(0, 0);
+
+		while (traceNotFound) {
+			// Check if we should stop painting
+			if (averageBrushSize == smallerBrushSize
+					&& (invalidTrajectoriesCounter > maxInvalidTrajectoriesForSmallerSize
+							|| invalidTracesCounter > maxInvalidTracesForSmallerSize)) {
+				float totalTime = (millis() - startTime) / 1000.0f;
+
+				println("Total number of painted traces: " + nTraces);
+				println("Average frame rate = " + round(frameCount / totalTime));
+				println("Processing time = " + totalTime + " seconds");
+
+				// Stop the while loop
+				trace = null;
+				traceNotFound = false;
+			} else {
 				// Change the average brush size if there were too many invalid traces
-				if (averageBrushSize > smallerBrushSize && invalidTracesCounter > maxInvalidTraces) {
+				if (averageBrushSize > smallerBrushSize && (invalidTrajectoriesCounter > maxInvalidTrajectories
+						|| invalidTracesCounter > maxInvalidTraces)) {
 					averageBrushSize = max(smallerBrushSize,
 							min(averageBrushSize / brushSizeDecrement, averageBrushSize - 2));
 					float ellapsedTime = (millis() - lastChangeTime) / 1000.0f;
@@ -186,7 +241,8 @@ public class OilPaintingSketch extends PApplet {
 					println("Average frame rate = " + round((frameCount - lastChangeFrameCount) / ellapsedTime));
 					println();
 
-					// Reset some of the sketch variables
+					// Reset some of the variables
+					invalidTrajectoriesCounter = 0;
 					invalidTracesCounter = 0;
 					lastChangeTime = millis();
 					lastChangeFrameCount = frameCount;
@@ -195,85 +251,52 @@ public class OilPaintingSketch extends PApplet {
 					Arrays.fill(visitedPixels, false);
 				}
 
-				// Create new traces until one of them has a valid trajectory
+				// Create new traces until one of them has a valid trajectory or we exceed a number of tries
 				boolean validTrajectory = false;
-				PVector initPosition = new PVector(0, 0);
 				float brushSize = max(smallerBrushSize, averageBrushSize * random(0.95f, 1.05f));
-				int nSteps = (int) max(minTraceLength, relativeTraceLength * brushSize / traceSpeed);
+				int nSteps = (int) (max(minTraceLength, relativeTraceLength * brushSize * random(0.9f, 1.1f))
+						/ traceSpeed);
 
-				while (!validTrajectory) {
+				while (!validTrajectory && invalidTrajectoriesCounter % 500 != 499) {
 					// Create the trace
 					int pixel = badPaintedPixels[floor(random(nBadPaintedPixels))];
-					initPosition.set(pixel % imgWidth, pixel / imgWidth);
-					trace = new Trace(this, initPosition, nSteps, traceSpeed);
+					startingPosition.set(pixel % imgWidth, pixel / imgWidth);
+					trace = new Trace(this, startingPosition, nSteps, traceSpeed);
 
 					// Check if it has a valid trajectory
-					validTrajectory = trace.hasValidTrajectory(similarColor, visitedPixels, imgWidth, imgHeight);
+					validTrajectory = trace.hasValidTrajectory(similarColorPixels, visitedPixels, originalImg);
+
+					// Increase the counter
+					invalidTrajectoriesCounter++;
 				}
 
-				// Create the brush
-				int nBristles = (int) (brushSize * random(1.6f, 1.9f));
-				float bristleLength = min(2 * brushSize, maxBristleLength);
-				float bristleThickness = min(0.8f * brushSize, maxBristleThickness);
-				Brush brush = new Brush(this, initPosition, brushSize, nBristles, bristleLength, bristleThickness);
+				// Check if we have a valid trajectory
+				if (validTrajectory) {
+					// Reset the invalid trajectories counter
+					invalidTrajectoriesCounter = 0;
 
-				// Add the brush to the trace
-				trace.setBrush(brush);
+					// Set the trace brush size
+					trace.setBrushSize(brushSize);
 
-				// Calculate the trace colors and check that painting the trace will improve the painting
-				if (trace.calculateColors(maxColorDiff, similarColor, originalImg, canvas, bgColor)) {
-					// Test passed, the trace is good enough to be painted
-					newTrace = false;
-					nTraces++;
-					invalidTracesCounter = 0;
-					step = 0;
+					// Calculate the trace colors and check that painting the trace will improve the painting
+					if (trace.calculateColors(maxColorDiff, similarColorPixels, originalImg, canvas, bgColor)) {
+						// Test passed, the trace is good enough to be painted
+						traceNotFound = false;
+						nTraces++;
+					} else {
+						// The trace is not good enough, try again in the next loop
+						invalidTracesCounter++;
+					}
 				} else {
 					// The trace is not good enough, try again in the next loop
+					invalidTrajectoriesCounter++;
 					invalidTracesCounter++;
 				}
 			}
-		} else if (paint) {
-			// Paint the trace step by step or in one go
-			if (drawStepByStep) {
-				trace.paint(step, visitedPixels, imgWidth, imgHeight, canvas, false);
-				step++;
-
-				if (step == trace.getNSteps()) {
-					newTrace = true;
-				}
-			} else {
-				trace.paint(visitedPixels, imgWidth, imgHeight, canvas, false);
-				newTrace = true;
-			}
-
-			// Update the pixel arrays if we finished to paint the trace
-			if (newTrace) {
-				updatePixelArrays();
-			}
-
-			// Draw the additional images if necessary
-			if (comparisonMode) {
-				image(originalImg, imgWidth, 0);
-			} else if (debugMode) {
-				drawDebugImages();
-			}
-
-			// Save the frame if we are making a movie
-			if (makeMovie) {
-				saveMovieFrame();
-				frameCounter++;
-			}
-		} else {
-			// Save the frame if we are making a movie
-			if (makeMovie) {
-				// Trick to make the Movie Maker tool work
-				fill(color(random(250, 255)));
-				ellipse(0, 0, 2, 2);
-
-				saveMovieFrame();
-				frameCounter++;
-			}
 		}
+
+		// Return the trace
+		return trace;
 	}
 
 	/**
@@ -290,21 +313,20 @@ public class OilPaintingSketch extends PApplet {
 			for (int y = 0; y < imgHeight; y++) {
 				// Check if the pixel is well painted
 				boolean wellPainted = false;
-				int pixel = x + y * imgWidth;
-				int canvasCol = pixels[x + y * width];
+				int imgPixel = x + y * imgWidth;
+				int paintedCol = pixels[x + y * width];
 
-				if (canvasCol != bgColor) {
-					int originalCol = originalImg.pixels[pixel];
-					int rDiff = abs(((originalCol >> 16) & 0xff) - ((canvasCol >> 16) & 0xff));
-					int gDiff = abs(((originalCol >> 8) & 0xff) - ((canvasCol >> 8) & 0xff));
-					int bDiff = abs((originalCol & 0xff) - (canvasCol & 0xff));
-					wellPainted = (rDiff < maxColorDiff[0]) && (gDiff < maxColorDiff[1]) && (bDiff < maxColorDiff[2]);
+				if (paintedCol != bgColor) {
+					int originalCol = originalImg.pixels[imgPixel];
+					wellPainted = abs(((originalCol >> 16) & 0xff) - ((paintedCol >> 16) & 0xff)) < maxColorDiff[0]
+							&& abs(((originalCol >> 8) & 0xff) - ((paintedCol >> 8) & 0xff)) < maxColorDiff[1]
+							&& abs((originalCol & 0xff) - (paintedCol & 0xff)) < maxColorDiff[2];
 				}
 
-				similarColor[pixel] = wellPainted;
+				similarColorPixels[imgPixel] = wellPainted;
 
 				if (!wellPainted) {
-					badPaintedPixels[nBadPaintedPixels] = pixel;
+					badPaintedPixels[nBadPaintedPixels] = imgPixel;
 					nBadPaintedPixels++;
 				}
 			}
@@ -315,7 +337,7 @@ public class OilPaintingSketch extends PApplet {
 	}
 
 	/**
-	 * Draws on the screen the visited pixels and similar color arrays
+	 * Draws on the screen the visited pixels and similar color pixels arrays
 	 */
 	public void drawDebugImages() {
 		// Load the screen pixels
@@ -324,9 +346,10 @@ public class OilPaintingSketch extends PApplet {
 		// Draw the arrays
 		for (int x = 0; x < imgWidth; x++) {
 			for (int y = 0; y < imgHeight; y++) {
-				int pixel = x + y * imgWidth;
-				pixels[x + y * width + imgWidth] = visitedPixels[pixel] ? 0xff000000 : 0xffffffff;
-				pixels[x + y * width + 2 * imgWidth] = similarColor[pixel] ? 0xff000000 : 0xffffffff;
+				int imgPixel = x + y * imgWidth;
+				int screenPixel = x + y * width + imgWidth;
+				pixels[screenPixel] = visitedPixels[imgPixel] ? 0xff000000 : 0xffffffff;
+				pixels[screenPixel + imgWidth] = similarColorPixels[imgPixel] ? 0xff000000 : 0xffffffff;
 			}
 		}
 
@@ -338,24 +361,30 @@ public class OilPaintingSketch extends PApplet {
 	 * Saves the movie frames with a format that can be processed with the movie maker tool
 	 */
 	public void saveMovieFrame() {
-		if (frameCounter % movieFrameRate == 0) {
+		if (!continuePainting) {
+			// Trick to make the Movie Maker tool work when we don't paint anything
+			fill(color(random(250, 255)));
+			ellipse(0, 0, 2, 2);
+		}
+
+		if (frameCount % movieFrameRate == 0) {
 			String fileRootName = frameDir;
 
-			if (frameCounter < 10) {
+			if (frameCount < 10) {
 				fileRootName += "000000";
-			} else if (frameCounter < 100) {
+			} else if (frameCount < 100) {
 				fileRootName += "00000";
-			} else if (frameCounter < 1000) {
+			} else if (frameCount < 1000) {
 				fileRootName += "0000";
-			} else if (frameCounter < 10000) {
+			} else if (frameCount < 10000) {
 				fileRootName += "000";
-			} else if (frameCounter < 100000) {
+			} else if (frameCount < 100000) {
 				fileRootName += "00";
-			} else if (frameCounter < 1000000) {
+			} else if (frameCount < 1000000) {
 				fileRootName += "0";
 			}
 
-			saveFrame(fileRootName + frameCounter + ".png");
+			saveFrame(fileRootName + frameCount + ".png");
 		}
 	}
 
