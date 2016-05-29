@@ -39,7 +39,7 @@ public class Trace {
 	/**
 	 * The maximum allowed fraction of pixels in the trace with colors similar to the original image
 	 */
-	private static final float MAX_SIMILAR_COLOR_FRACTION = 0.8f;
+	private static final float MAX_SIMILAR_COLOR_FRACTION = 0.5f; // 0.8 - 0.85 - 0.5
 
 	/**
 	 * The minimum fraction of pixels in the trace that should fall inside the canvas
@@ -60,17 +60,17 @@ public class Trace {
 	 * The minimum improvement fraction in the number of well painted pixels to consider to paint the trace even if
 	 * there is not a significant color improvement
 	 */
-	private static final float BIG_WELL_PAINTED_IMPROVEMENT_FRACTION = 0.3f;
+	private static final float BIG_WELL_PAINTED_IMPROVEMENT_FRACTION = 0.4f; // 0.3 - 0.35 - 0.4
 
 	/**
 	 * The minimum reduction fraction in the number of bad painted pixels required to paint the trace on the canvas
 	 */
-	private static final float MIN_BAD_PAINTED_REDUCTION_FRACTION = 0.45f;
+	private static final float MIN_BAD_PAINTED_REDUCTION_FRACTION = 0.45f; // 0.45 - 0.3 - 0.45
 
 	/**
 	 * The maximum allowed fraction of pixels in the trace that were previously well painted and will be now bad painted
 	 */
-	private static final float MAX_WELL_PAINTED_DESTRUCTION_FRACTION = 0.4f;
+	private static final float MAX_WELL_PAINTED_DESTRUCTION_FRACTION = 0.4f; // 0.4 - 0.55 - 0.4
 
 	/**
 	 * The brightness relative change range between the bristles

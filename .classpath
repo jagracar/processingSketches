@@ -8,5 +8,6 @@
 	<classpathentry kind="lib" path="/home/jgracia/admin/eclipse/libs/video.jar"/>
 	<classpathentry kind="lib" path="/home/jgracia/admin/eclipse/libs/gstreamer-java.jar"/>
 	<classpathentry kind="lib" path="/home/jgracia/admin/eclipse/libs/jna.jar"/>
+	<classpathentry kind="lib" path="/home/jgracia/admin/eclipse/libs/gifAnimation.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
