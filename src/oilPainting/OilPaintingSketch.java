@@ -18,7 +18,7 @@ import processing.core.PVector;
  */
 public class OilPaintingSketch extends PApplet {
 	// The paths to the pictures that we want to paint
-	private String[] pictureFiles = { "/home/jgracia/garzon_v2.png", "src/oilPainting/picture.jpg" };
+	private String[] pictureFiles = { "src/oilPainting/picture.jpg" };
 	// The path to the picture that should be used as initial background
 	private String backgroundPictureFile = null;
 	// The directory where the output files should be saved
@@ -29,6 +29,8 @@ public class OilPaintingSketch extends PApplet {
 	private float sizeReductionFactor = 1.0f;
 	// Use a separate canvas buffer for color mixing (a bit slower)
 	private boolean useCanvas = false;
+	// Paint each picture with a clean canvas
+	private boolean startWithCleanCanvas = false;
 	// Compare the oil paint with the original picture
 	private boolean comparisonMode = false;
 	// Show additional debug images
@@ -38,7 +40,7 @@ public class OilPaintingSketch extends PApplet {
 	// Make a gif showing the painting in steps
 	private boolean makeGif = false;
 	// Paint the traces step by step, or in one go
-	private boolean paintStepByStep = false;
+	private boolean paintStepByStep = true;
 	// Avoid painting on areas with the same color as the canvas background
 	private boolean avoidBackgroundRegions = true;
 	// Save a picture of the final frame of each picture paint
@@ -225,6 +227,17 @@ public class OilPaintingSketch extends PApplet {
 
 				// Load the original image pixels. This way they will be available all the time
 				originalImg.loadPixels();
+
+				// Clean the screen and the canvas if necessary
+				if (startWithCleanCanvas) {
+					background(backgroundColor);
+
+					if (useCanvas) {
+						canvas.beginDraw();
+						canvas.background(backgroundColor);
+						canvas.endDraw();
+					}
+				}
 
 				// Reset the visited pixels array
 				Arrays.fill(visitedPixels, false);
@@ -476,24 +489,28 @@ public class OilPaintingSketch extends PApplet {
 			ellipse(0, 0, 2, 2);
 		}
 
-		if (frameCount % movieFrameStep == 0) {
+		// Make the frame counter start from zero
+		int frame = frameCount - 1;
+
+		// Save a picture after a given number of frames
+		if (frame % movieFrameStep == 0) {
 			String fileRootName = outputDir;
 
-			if (frameCount < 10) {
+			if (frame < 10) {
 				fileRootName += "000000";
-			} else if (frameCount < 100) {
+			} else if (frame < 100) {
 				fileRootName += "00000";
-			} else if (frameCount < 1000) {
+			} else if (frame < 1000) {
 				fileRootName += "0000";
-			} else if (frameCount < 10000) {
+			} else if (frame < 10000) {
 				fileRootName += "000";
-			} else if (frameCount < 100000) {
+			} else if (frame < 100000) {
 				fileRootName += "00";
-			} else if (frameCount < 1000000) {
+			} else if (frame < 1000000) {
 				fileRootName += "0";
 			}
 
-			saveFrame(fileRootName + frameCount + ".png");
+			saveFrame(fileRootName + frame + ".png");
 		}
 	}
 
@@ -501,10 +518,17 @@ public class OilPaintingSketch extends PApplet {
 	 * Saves the current gif frame
 	 */
 	private void saveGifFrame() {
-		if (gifMaker != null && frameCount % gifFrameStep == 0) {
+		if (gifMaker != null && (frameCount - 1) % gifFrameStep == 0) {
 			gifMaker.setDelay(1);
 			gifMaker.addFrame();
 		}
+	}
+
+	/**
+	 * Saves an screenshot of the current painting state each time the mouse is clicked
+	 */
+	public void mouseClicked() {
+		saveFrame(outputDir + "screenshot" + millis() + ".png");
 	}
 
 	/**

@@ -39,7 +39,7 @@ public class Trace {
 	/**
 	 * The maximum allowed fraction of pixels in the trace with colors similar to the original image
 	 */
-	private static final float MAX_SIMILAR_COLOR_FRACTION = 0.5f; // 0.8 - 0.85 - 0.5
+	private static final float MAX_SIMILAR_COLOR_FRACTION = 0.8f; // 0.8 - 0.85 - 0.5
 
 	/**
 	 * The minimum fraction of pixels in the trace that should fall inside the canvas
@@ -60,7 +60,7 @@ public class Trace {
 	 * The minimum improvement fraction in the number of well painted pixels to consider to paint the trace even if
 	 * there is not a significant color improvement
 	 */
-	private static final float BIG_WELL_PAINTED_IMPROVEMENT_FRACTION = 0.4f; // 0.3 - 0.35 - 0.4
+	private static final float BIG_WELL_PAINTED_IMPROVEMENT_FRACTION = 0.3f; // 0.3 - 0.35 - 0.4
 
 	/**
 	 * The minimum reduction fraction in the number of bad painted pixels required to paint the trace on the canvas
