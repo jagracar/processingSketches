@@ -8,12 +8,12 @@ import processing.core.PImage;
 import processing.core.PVector;
 
 /**
- * ScanBox class
- *
- * Scans are taken inside this box
+ * This class defines a box inside of which the Kinect scans are taken
  *
  * Uses OpenCV 2 to center the box in the first detected face. If you don't have OpenCV installed in your computer, you
  * should comment the lines inside the centerInFace() function, but centerInFace() still needs to be defined.
+ * 
+ * @author Javier Graciá Carpio (jagracar)
  */
 public class ScanBox {
 
@@ -41,14 +41,14 @@ public class ScanBox {
 	/**
 	 * Paints the box on the screen
 	 * 
-	 * @param p the Processing applet
+	 * @param p the parent Processing applet
+	 * @param color the color to use
 	 */
-	public void paint(PApplet p, int col) {
+	public void paint(PApplet p, int color) {
 		p.pushStyle();
 		p.noFill();
-		p.stroke(col);
+		p.stroke(color);
 		p.strokeWeight(1);
-
 		p.pushMatrix();
 		p.translate(center.x, center.y, center.z);
 		p.line(-size, 0, 0, size, 0, 0);
@@ -56,14 +56,13 @@ public class ScanBox {
 		p.line(0, 0, -size, 0, 0, size);
 		p.box(size, size, size);
 		p.popMatrix();
-
 		p.popStyle();
 	}
 
 	/**
 	 * Detects a face inside the provided Kinect points and centers the box on the face position
 	 * 
-	 * @param p the Processing applet
+	 * @param p the parent Processing applet
 	 * @param kp the Kinect points used to detect the face
 	 */
 	public void centerInFace(PApplet p, KinectPoints kp) {
@@ -94,7 +93,7 @@ public class ScanBox {
 			int x = face.x + (int) (face.width / 2);
 			int y = face.y + (int) (face.height / 2);
 			int index = x + y * kp.width;
-			
+
 			if (kp.visibilityMask[index]) {
 				center = kp.points[index].copy();
 				center.add(0, 0, 100); // add some offset

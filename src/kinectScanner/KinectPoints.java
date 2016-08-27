@@ -161,6 +161,15 @@ public class KinectPoints {
 	}
 
 	/**
+	 * Constrains the points visibilities to a cube delimited by some lower and upper corner coordinates
+	 * 
+	 * @param corners an array with the lower and upper corners
+	 */
+	public void constrainPoints(PVector[] corners) {
+		constrainPoints(corners[0].x, corners[1].x, corners[0].y, corners[1].y, corners[0].z, corners[1].z);
+	}
+
+	/**
 	 * Calculates the square of the distance between two points
 	 * 
 	 * @param point1 first point

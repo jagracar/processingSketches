@@ -4,8 +4,8 @@ import java.util.ArrayList;
 
 import SimpleOpenNI.SimpleOpenNI;
 import processing.core.PApplet;
+import processing.core.PImage;
 import processing.core.PVector;
-import sun.nio.cs.ext.SJIS;
 
 /**
  * Simple 3D scanner using the Kinect (JGC, version 6).
@@ -28,12 +28,7 @@ public class KinectScannerSketch extends PApplet {
 	public boolean monochrome = false;
 	public int monochromeCol = color(220, 50, 50);
 	public int resolution = 2;
-	public float xmin = Float.MAX_VALUE;
-	public float xmax = -Float.MAX_VALUE;
-	public float ymin = Float.MAX_VALUE;
-	public float ymax = -Float.MAX_VALUE;
-	public float zmin = Float.MAX_VALUE;
-	public float zmax = -Float.MAX_VALUE;
+	public PVector[] limits;
 	public String fileName = "test";
 	public String fileDir = "out/";
 	public boolean drawBox = false;
@@ -60,10 +55,9 @@ public class KinectScannerSketch extends PApplet {
 	public float rotX = initRotX;
 	public float rotY = initRotY;
 
-	private SimpleOpenNI context;
+	public SimpleOpenNI context;
 	public ScanBox sBox;
-	public Ball ball;
-	private TransparentFloor transparentFloor;
+	private Floor transparentFloor;
 	public KinectPoints kPoints;
 	private Scan scan;
 	public Scan slitScan;
@@ -73,11 +67,15 @@ public class KinectScannerSketch extends PApplet {
 	private ArrayList<Scan> scansToAverage = new ArrayList<Scan>();
 	public ArrayList<Slit> slits = new ArrayList<Slit>();
 	private int frameIterator = 0;
-	private int lastGesture;
-	private PVector handPos = new PVector();
-	private PVector prevHandPos = new PVector();
-	public boolean firstTimeControl = false;
-	private ControlPanel controlPanel;
+	private PVector handPos;
+	private PVector prevHandPos;
+	private KinectControlPanel controlPanel;
+	private MovingImg bier;
+	private MovingImg[] brezeln;
+	private PImage backgroundFig;
+	public Sculpture sculpt;
+	private boolean handIsEnabled = false;
+	private int handGesture = 0;
 
 	/**
 	 * Sets the default window size
@@ -98,49 +96,46 @@ public class KinectScannerSketch extends PApplet {
 		context.enableDepth();
 		context.enableRGB();
 		context.alternativeViewPointDepthToImage();
-		context.enableHand();
-		context.startGesture(SimpleOpenNI.GESTURE_HAND_RAISE);
-		// context.enableUser();
+		handGesture = SimpleOpenNI.GESTURE_HAND_RAISE;
 
 		// Update the kinect to calculate the scene limits
 		context.update();
 		kPoints = new KinectPoints(context.depthMapRealWorld(), context.rgbImage(), context.depthMap(), 5);
-		KinectHelper.calculateLimits(kPoints);
-		xmin = -1100;
-		xmax = 1100;
-		ymin = -1500;
-		ymax = 1000;
-		zmin = 0;
-		zmax = 3300;
+		limits = KinectHelper.calculateLimits(kPoints);
+		//limits[0] = new PVector(-1100, -1500, 0);
+		//limits[1] = new PVector(1100, 1000, 3300);
 
 		// Initialize the scan box
-		sBox = new ScanBox(new PVector((xmax + xmin) / 2, (ymax + ymin) / 2, (zmax + zmin) / 2), 400);
+		sBox = new ScanBox(PVector.add(limits[0], limits[1]).mult(0.5f), 400);
 
 		// Initialize the semitransparent floor
-		transparentFloor = new TransparentFloor(this, 2 * xmin, 2 * xmax, ymin, ymax, zmin, zmax, color(0));
+		transparentFloor = new Floor(this, color(0));
 
 		// Initialize the sculpture
-		// sculpt = new Sculpture();
-		// sculpt.setSides(sculptureSides);
-
-		// Initialize the ball for the hand position
-		ball = new Ball(handPos,10);
+		sculpt = new Sculpture(100f, sculptureSides, 2);
 
 		// Initialize the controlP5 window. This should come after all the other definitions
-		controlPanel = new ControlPanel(this, 0, 0);
+		controlPanel = new KinectControlPanel(this, 0, 0);
 
 		// Start the controller sketch window
-		PApplet.runSketch(new String[] { ControlPanel.class.getName() }, controlPanel);
+		PApplet.runSketch(new String[] { KinectControlPanel.class.getName() }, controlPanel);
 
-		// imageMode(CENTER);
-		// mass = loadImage("/home/jgracia/sketchbook/mass3.png");
-		// beer = new Bier(mass, initHandPos);
-		// bretz = loadImage("/home/jgracia/sketchbook/bretzel2.png");
-		// bretzel1 = new Bretzel(bretz,new PVector(random(-500,500),random(700,1000),random(600,2000)));
-		// bretzel2 = new Bretzel(bretz,new PVector(random(-500,500),random(700,1000),random(600,2000)));
-		// bretzel3 = new Bretzel(bretz,new PVector(random(-500,500),random(700,1000),random(600,2000)));
+		PImage bierImg = loadImage("src/kinectScanner/mass.png");
+		PImage bretzelImg = loadImage("src/kinectScanner/bretzel.png");
 
-		// backgroundFig = loadImage("UAMO2013.jpg");
+		bier = new MovingImg(bierImg);
+		bier.angle = PI;
+
+		brezeln = new MovingImg[30];
+
+		for (int i = 0; i < brezeln.length; i++) {
+			MovingImg brezel = new MovingImg(bretzelImg);
+			brezel.position = getRandomPosition();
+			brezel.velocity.set(0, -5, 0);
+			brezeln[i] = brezel;
+		}
+
+		backgroundFig = loadImage("src/kinectScanner/UAMO2013.jpg");
 	}
 
 	/**
@@ -153,11 +148,11 @@ public class KinectScannerSketch extends PApplet {
 		// Update the kinect points
 		context.update();
 		kPoints = new KinectPoints(context.depthMapRealWorld(), context.rgbImage(), context.depthMap(), resolution);
-		kPoints.constrainPoints(xmin, xmax, ymin, ymax, zmin, zmax);
+		kPoints.constrainPoints(limits);
 
 		// Position the scene
-		background(150);
-		// background(backgroundFig);
+		// background(150);
+		background(backgroundFig);
 		translate(width / 2, height / 2, 0);
 		rotateX(rotX);
 		rotateY(rotY);
@@ -165,7 +160,7 @@ public class KinectScannerSketch extends PApplet {
 		translate(0, 0, -1500);
 
 		// Draw the floor
-		transparentFloor.paint(this);
+		transparentFloor.paint(this, limits);
 
 		// Draw the scan box
 		if (drawBox) {
@@ -260,6 +255,20 @@ public class KinectScannerSketch extends PApplet {
 			saveSlitScan = false;
 		}
 
+		if (oktoberfest || takeSculpture || handControl) {
+			if (!handIsEnabled) {
+				context.enableHand();
+				context.startGesture(handGesture);
+				handIsEnabled = true;
+			}
+		} else if (handIsEnabled) {
+			context.enableHand(false);
+			context.endGesture(handGesture);
+			handIsEnabled = false;
+			handPos = null;
+			prevHandPos = null;
+		}
+
 		// Draw the sculpture
 		if (drawSculpture && !oktoberfest) {
 			if (!monochrome) {
@@ -269,64 +278,113 @@ public class KinectScannerSketch extends PApplet {
 				lightSpecular(0, 0, 0);
 			}
 
-			// sculpt.paint(color(255));
-			ball.update(handPos);
-			ball.paint(this, color(255, 20, 20));
+			sculpt.paint(this, color(255));
+
+			if (handPos != null) {
+				pushStyle();
+				noStroke();
+				fill(color(255, 20, 20));
+				pushMatrix();
+				translate(handPos.x, handPos.y, handPos.z);
+				sphere(10);
+				popMatrix();
+				popStyle();
+			}
 		}
 
 		// Save the last sculpture
-		if (saveSculpture) {// && sculpt.nPoints > 2) {
+		if (saveSculpture) {
 			sculptureCounter++;
 			String sculptureFileName = fileDir + fileName + "-" + sculptureCounter;
-			// sculpt.savePoints(sculptureFileName);
+			sculpt.savePoints(this, sculptureFileName);
 			saveSculpture = false;
 		}
 
 		// Oktoberfest fun
 		if (oktoberfest) {
-			// bretzel1.update();
-			// bretzel2.update();
-			// bretzel3.update();
-			//
-			// float[] zpos = {bretzel1.pos.z,bretzel2.pos.z,bretzel3.pos.z,handPos.z};
-			// zpos = sort(zpos);
-			//
-			// for(int i = 3; i >= 0 ; i--){
-			// if(bretzel1.pos.z == zpos[i]){
-			// bretzel1.paint();
-			// }
-			// if(bretzel2.pos.z == zpos[i]){
-			// bretzel2.paint();
-			// }
-			// if(bretzel3.pos.z == zpos[i]){
-			// bretzel3.paint();
-			// }
-			// if(handPos.z == zpos[i]){
-			// beer.paint(handPos);
-			// }
-			// }
-			//
-			// bretzel1.checkOver(handPos);
-			// bretzel2.checkOver(handPos);
-			// bretzel3.checkOver(handPos);
-		}
-
-		// Control the scene with the body
-		if (handControl && !(handPos.x == 0 && handPos.y == 0 && handPos.z == 0)) {
-			if (firstTimeControl) {
-				firstTimeControl = false;
+			if (handPos != null) {
+				bier.position.set(handPos.x, handPos.y, handPos.z - 60);
+				bier.visible = true;
 			} else {
-				rotY += map(handPos.x - prevHandPos.x, -2000, 2000, -PI, PI);
-				rotX -= map(handPos.y - prevHandPos.y, -2000, 2000, -PI, PI);
+				bier.visible = false;
+			}
 
-				if (handPos.z - prevHandPos.z > 0) {
-					zoom /= map(handPos.z - prevHandPos.z, 0, 2000, 1, 2);
-				} else {
-					zoom *= map(-handPos.z + prevHandPos.z, 0, 2000, 1, 2);
+			for (MovingImg brezel : brezeln) {
+				if (handPos != null && brezel.closeToPosition(handPos)) {
+					brezel.position = getRandomPosition();
+				}
+
+				brezel.update();
+
+				if (brezel.position.y < 0) {
+					brezel.position = getRandomPosition();
 				}
 			}
 
-			prevHandPos.set(handPos);
+			sortImages(brezeln);
+
+			boolean bierIsPainted = false;
+
+			for (MovingImg brezel : brezeln) {
+				if (bier.position.z > brezel.position.z) {
+					bier.paint(this);
+					bierIsPainted = true;
+				}
+
+				brezel.paint(this);
+			}
+
+			if (!bierIsPainted) {
+				bier.paint(this);
+			}
+		}
+
+		// Control the scene with the body
+		if (handControl && handPos != null) {
+			rotY += map(handPos.x - prevHandPos.x, -2000, 2000, -PI, PI);
+			rotX -= map(handPos.y - prevHandPos.y, -2000, 2000, -PI, PI);
+
+			if (handPos.z - prevHandPos.z > 0) {
+				zoom /= map(handPos.z - prevHandPos.z, 0, 2000, 1, 2);
+			} else {
+				zoom *= map(-handPos.z + prevHandPos.z, 0, 2000, 1, 2);
+			}
+		}
+	}
+
+	public PVector getRandomPosition() {
+		float x = -500f + 1000f * ((float) Math.random());
+		float y = 700f + 300f * ((float) Math.random());
+		float z = 600f + 1400f * ((float) Math.random());
+		return new PVector(x, y, z);
+	}
+
+	/**
+	 * Sorts the images depending of their z coordinate
+	 * 
+	 * @param images the array of images to sort
+	 */
+	public void sortImages(MovingImg[] images) {
+		int n = images.length;
+
+		for (int i = 0; i < n - 1; i++) {
+			int maxPos = i;
+			float maxValue = images[i].position.z;
+
+			for (int j = i + 1; j < n; j++) {
+				float value = images[j].position.z;
+
+				if (value > maxValue) {
+					maxPos = j;
+					maxValue = value;
+				}
+			}
+
+			if (maxPos != i) {
+				MovingImg tmp = images[i];
+				images[i] = images[maxPos];
+				images[maxPos] = tmp;
+			}
 		}
 	}
 
@@ -357,10 +415,11 @@ public class KinectScannerSketch extends PApplet {
 
 	public void onCompletedGesture(SimpleOpenNI curContext, int gestureType, PVector pos) {
 		println("SimpleOpenNI hand information: Recognized gesture (" + gestureType + ")");
-		if (pos.x > -700 && pos.x < 700 && pos.y > -500 && pos.y < ymax && pos.z > 500 && pos.z < 2500) {
+		if (pos.x > -700 && pos.x < 700 && pos.y > -500 && pos.y < limits[1].y && pos.z > 500 && pos.z < 2500) {
 			context.endGesture(gestureType);
 			context.startTrackingHand(pos);
-			lastGesture = gestureType;
+			handPos = pos.copy();
+			prevHandPos = pos.copy();
 		}
 	}
 
@@ -369,17 +428,19 @@ public class KinectScannerSketch extends PApplet {
 	}
 
 	public void onTrackedHand(SimpleOpenNI curContext, int handId, PVector pos) {
-		handPos.set(pos);
+		prevHandPos = handPos;
+		handPos = pos.copy();
 
 		if (takeSculpture) {
-			// sculpt.addPoint(pos);
+			sculpt.addControlPoint(pos);
 		}
 	}
 
 	public void onLostHand(SimpleOpenNI curContext, int handId) {
 		println("SimpleOpenNI hand information: Hand destroyed (id: " + handId + ")");
-		context.startGesture(lastGesture);
-		handPos.set(0, 0, 0);
+		context.startGesture(handGesture);
+		handPos = null;
+		prevHandPos = null;
 
 		if (handControl) {
 			zoom = initZoom;

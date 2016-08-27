@@ -12,14 +12,22 @@ import controlP5.Textfield;
 import controlP5.Toggle;
 import processing.core.PApplet;
 
-class ControlPanel extends PApplet {
+/**
+ * Kinect control panel
+ * 
+ * Allows the manipulation of some sketch parameters
+ * 
+ * @author Javier Graciá Carpio (jagracar)
+ */
+class KinectControlPanel extends PApplet {
+
 	private ControlP5 cp5;
 	private KinectScannerSketch p;
-	private int windowPosX;
-	private int windowPosY;
-	private int windowWidth = 400;
-	private int windowHeight = 912;
-	private String windowTitle = "Kinect control panel";
+	private int panelPosX;
+	private int panelPosY;
+	private int panelWidth = 400;
+	private int panelHeight = 912;
+	private String panelTitle = "Kinect control panel";
 	private int marginX = 10;
 	private int marginY = 10;
 	private int deltaX = 110;
@@ -36,29 +44,29 @@ class ControlPanel extends PApplet {
 	 * Constructor
 	 * 
 	 * @param p the main Processing sketch applet
-	 * @param windowPosX the control panel x position
-	 * @param windowPosY the control panel y position
+	 * @param panelPosX the control panel x position
+	 * @param panelPosY the control panel y position
 	 */
-	public ControlPanel(KinectScannerSketch p, int windowPosX, int windowPosY) {
+	public KinectControlPanel(KinectScannerSketch p, int panelPosX, int panelPosY) {
 		this.p = p;
-		this.windowPosX = windowPosX;
-		this.windowPosY = windowPosY;
+		this.panelPosX = panelPosX;
+		this.panelPosY = panelPosY;
 	}
 
 	/**
-	 * Sets the control panel window dimensions
+	 * Sets the control panel dimensions
 	 */
 	public void settings() {
-		size(windowWidth, windowHeight);
+		size(panelWidth, panelHeight);
 	}
 
 	/**
 	 * Initial setup
 	 */
 	public void setup() {
-		// Move the control panel window to the desired screen position and change the title
-		surface.setLocation(windowPosX, windowPosY);
-		surface.setTitle(windowTitle);
+		// Move the control panel to the desired screen position and change the title
+		surface.setLocation(panelPosX, panelPosY);
+		surface.setTitle(panelTitle);
 
 		// Create the ControlP5 object
 		cp5 = new ControlP5(this);
@@ -66,7 +74,7 @@ class ControlPanel extends PApplet {
 		// General parameters group controllers
 		Group generalGroup = cp5.addGroup("generalGroup");
 		generalGroup.setPosition(marginX, marginY + groupBarHeight);
-		generalGroup.setSize(windowWidth - 2 * marginX, marginY + 6 * deltaY);
+		generalGroup.setSize(panelWidth - 2 * marginX, marginY + 6 * deltaY);
 		generalGroup.setBarHeight(groupBarHeight);
 		generalGroup.setBackgroundColor(groupBackgroundColor);
 		generalGroup.setCaptionLabel("General parameters");
@@ -110,8 +118,9 @@ class ControlPanel extends PApplet {
 		Range range = cp5.addRange("xRange");
 		range.setPosition(marginX, marginY + 2 * deltaY);
 		range.setSize(sliderWidth, buttonSize);
-		range.setRange(p.xmin - 0.1f * (p.xmax - p.xmin), p.xmax + 0.1f * (p.xmax - p.xmin));
-		range.setRangeValues(p.xmin, p.xmax);
+		range.setRange(p.limits[0].x - 0.1f * (p.limits[1].x - p.limits[0].x),
+				p.limits[1].x + 0.1f * (p.limits[1].x - p.limits[0].x));
+		range.setRangeValues(p.limits[0].x, p.limits[1].x);
 		range.setCaptionLabel("X limits");
 		range.getCaptionLabel().setPaddingX(padding);
 		range.setGroup(generalGroup);
@@ -119,8 +128,9 @@ class ControlPanel extends PApplet {
 		range = cp5.addRange("yRange");
 		range.setPosition(marginX, marginY + 3 * deltaY);
 		range.setSize(sliderWidth, buttonSize);
-		range.setRange(p.ymin - 0.1f * (p.ymax - p.ymin), p.ymax + 0.1f * (p.ymax - p.ymin));
-		range.setRangeValues(p.ymin, p.ymax);
+		range.setRange(p.limits[0].y - 0.1f * (p.limits[1].y - p.limits[0].y),
+				p.limits[1].y + 0.1f * (p.limits[1].y - p.limits[0].y));
+		range.setRangeValues(p.limits[0].y, p.limits[1].y);
 		range.setCaptionLabel("Y limits");
 		range.getCaptionLabel().setPaddingX(padding);
 		range.setGroup(generalGroup);
@@ -128,8 +138,9 @@ class ControlPanel extends PApplet {
 		range = cp5.addRange("zRange");
 		range.setPosition(marginX, marginY + 4 * deltaY);
 		range.setSize(sliderWidth, buttonSize);
-		range.setRange(p.zmin - 0.1f * (p.zmax - p.zmin), p.zmax + 0.1f * (p.zmax - p.zmin));
-		range.setRangeValues(p.zmin, p.zmax);
+		range.setRange(p.limits[0].z - 0.1f * (p.limits[1].z - p.limits[0].z),
+				p.limits[1].z + 0.1f * (p.limits[1].z - p.limits[0].z));
+		range.setRangeValues(p.limits[0].z, p.limits[1].z);
 		range.setCaptionLabel("Z limits");
 		range.getCaptionLabel().setPaddingX(padding);
 		range.setGroup(generalGroup);
@@ -146,7 +157,7 @@ class ControlPanel extends PApplet {
 		// Scan box group controllers
 		Group scanBoxGroup = cp5.addGroup("scanBoxGroup");
 		scanBoxGroup.setPosition(marginX, 2 * (marginY + groupBarHeight) + marginY + 6 * deltaY);
-		scanBoxGroup.setSize(windowWidth - 2 * marginX, marginY + 5 * deltaY);
+		scanBoxGroup.setSize(panelWidth - 2 * marginX, marginY + 5 * deltaY);
 		scanBoxGroup.setBarHeight(groupBarHeight);
 		scanBoxGroup.setBackgroundColor(groupBackgroundColor);
 		scanBoxGroup.setCaptionLabel("Scan box");
@@ -180,7 +191,7 @@ class ControlPanel extends PApplet {
 		slider = cp5.addSlider("xBox");
 		slider.setPosition(marginX, marginY + 2 * deltaY);
 		slider.setSize(sliderWidth, buttonSize);
-		slider.setRange(p.xmin, p.xmax);
+		slider.setRange(p.limits[0].x, p.limits[1].x);
 		slider.setValue(p.sBox.center.x);
 		slider.setCaptionLabel("X pos");
 		slider.getCaptionLabel().setPaddingX(padding);
@@ -189,7 +200,7 @@ class ControlPanel extends PApplet {
 		slider = cp5.addSlider("yBox");
 		slider.setPosition(marginX, marginY + 3 * deltaY);
 		slider.setSize(sliderWidth, buttonSize);
-		slider.setRange(p.ymin, p.ymax);
+		slider.setRange(p.limits[0].y, p.limits[1].y);
 		slider.setValue(p.sBox.center.y);
 		slider.setCaptionLabel("Y pos");
 		slider.getCaptionLabel().setPaddingX(padding);
@@ -198,7 +209,7 @@ class ControlPanel extends PApplet {
 		slider = cp5.addSlider("zBox");
 		slider.setPosition(marginX, marginY + 4 * deltaY);
 		slider.setSize(sliderWidth, buttonSize);
-		slider.setRange(p.zmin, p.zmax);
+		slider.setRange(p.limits[0].z, p.limits[1].z);
 		slider.setValue(p.sBox.center.z);
 		slider.setCaptionLabel("Z pos");
 		slider.getCaptionLabel().setPaddingX(padding);
@@ -207,7 +218,7 @@ class ControlPanel extends PApplet {
 		// Scan group controllers
 		Group scanGroup = cp5.addGroup("scanGroup");
 		scanGroup.setPosition(marginX, 3 * (marginY + groupBarHeight) + 2 * marginY + 11 * deltaY);
-		scanGroup.setSize(windowWidth - 2 * marginX, marginY + 3 * deltaY);
+		scanGroup.setSize(panelWidth - 2 * marginX, marginY + 3 * deltaY);
 		scanGroup.setBarHeight(groupBarHeight);
 		scanGroup.setBackgroundColor(groupBackgroundColor);
 		scanGroup.setCaptionLabel("Scan");
@@ -250,7 +261,7 @@ class ControlPanel extends PApplet {
 		// Slit scan group controllers
 		Group slitScanGroup = cp5.addGroup("slitScanGroup");
 		slitScanGroup.setPosition(marginX, 4 * (marginY + groupBarHeight) + 3 * marginY + 14 * deltaY);
-		slitScanGroup.setSize(windowWidth - 2 * marginX, marginY + 3 * deltaY);
+		slitScanGroup.setSize(panelWidth - 2 * marginX, marginY + 3 * deltaY);
 		slitScanGroup.setBarHeight(groupBarHeight);
 		slitScanGroup.setBackgroundColor(groupBackgroundColor);
 		slitScanGroup.setCaptionLabel("Slit scan");
@@ -260,7 +271,7 @@ class ControlPanel extends PApplet {
 		bang = cp5.addBang("orientationSlitScan");
 		bang.setPosition(marginX, marginY);
 		bang.setSize(buttonSize, buttonSize);
-		bang.setCaptionLabel("Vertical slit");
+		bang.setCaptionLabel(p.verticalSlitScan ? "Vertical slit" : "Horizontal slit");
 		bang.getCaptionLabel().align(ControlP5.RIGHT_OUTSIDE, ControlP5.CENTER).setPaddingX(padding);
 		bang.setGroup(slitScanGroup);
 
@@ -312,7 +323,7 @@ class ControlPanel extends PApplet {
 		// Sculpture group controllers
 		Group sculptureGroup = cp5.addGroup("sculptureGroup");
 		sculptureGroup.setPosition(marginX, 5 * (marginY + groupBarHeight) + 4 * marginY + 17 * deltaY);
-		sculptureGroup.setSize(windowWidth - 2 * marginX, marginY + 3 * deltaY);
+		sculptureGroup.setSize(panelWidth - 2 * marginX, marginY + 3 * deltaY);
 		sculptureGroup.setBarHeight(groupBarHeight);
 		sculptureGroup.setBackgroundColor(groupBackgroundColor);
 		sculptureGroup.setCaptionLabel("Sculpture");
@@ -362,7 +373,7 @@ class ControlPanel extends PApplet {
 		// Oder effects group controllers
 		Group oderEffectsGroup = cp5.addGroup("oderEffectsGroup");
 		oderEffectsGroup.setPosition(marginX, 6 * (marginY + groupBarHeight) + 5 * marginY + 20 * deltaY);
-		oderEffectsGroup.setSize(windowWidth - 2 * marginX, marginY + deltaY);
+		oderEffectsGroup.setSize(panelWidth - 2 * marginX, marginY + deltaY);
 		oderEffectsGroup.setBarHeight(groupBarHeight);
 		oderEffectsGroup.setBackgroundColor(groupBackgroundColor);
 		oderEffectsGroup.setCaptionLabel("Other effects");
@@ -412,7 +423,7 @@ class ControlPanel extends PApplet {
 	/**
 	 * Processes the control panel events
 	 * 
-	 * @param event the event
+	 * @param event the controller event
 	 */
 	void processEvent(ControlEvent event) {
 		String controllerGroupName = event.getController().getParent().getName();
@@ -425,7 +436,7 @@ class ControlPanel extends PApplet {
 			processScanEvent(event);
 		} else if (controllerGroupName.equals("slitScanGroup")) {
 			processSlitScanEvent(event);
-		} else if (controllerGroupName.equals("sculptrueGroup")) {
+		} else if (controllerGroupName.equals("sculptureGroup")) {
 			processSculptureEvent(event);
 		} else if (controllerGroupName.equals("oderEffectsGroup")) {
 			processOderEffectsEvent(event);
@@ -435,7 +446,7 @@ class ControlPanel extends PApplet {
 	/**
 	 * Processes the general parameters group events
 	 * 
-	 * @param event the event
+	 * @param event the controller event
 	 */
 	private void processGeneralEvent(ControlEvent event) {
 		Controller<?> controller = event.getController();
@@ -472,14 +483,14 @@ class ControlPanel extends PApplet {
 		} else if (controllerName.equals("resolution")) {
 			p.resolution = Math.round(controller.getValue());
 		} else if (controllerName.equals("xRange")) {
-			p.xmin = controller.getArrayValue(0);
-			p.xmax = controller.getArrayValue(1);
+			p.limits[0].x = controller.getArrayValue(0);
+			p.limits[1].x = controller.getArrayValue(1);
 		} else if (controllerName.equals("yRange")) {
-			p.ymin = controller.getArrayValue(0);
-			p.ymax = controller.getArrayValue(1);
+			p.limits[0].y = controller.getArrayValue(0);
+			p.limits[1].y = controller.getArrayValue(1);
 		} else if (controllerName.equals("zRange")) {
-			p.zmin = controller.getArrayValue(0);
-			p.zmax = controller.getArrayValue(1);
+			p.limits[0].z = controller.getArrayValue(0);
+			p.limits[1].z = controller.getArrayValue(1);
 		} else if (controllerName.equals("fileName")) {
 			p.fileName = ((Textfield) controller).getText();
 			System.out.println("Data will be saved in " + p.fileDir + p.fileName + "-*.*");
@@ -489,7 +500,7 @@ class ControlPanel extends PApplet {
 	/**
 	 * Processes the scan box group events
 	 * 
-	 * @param event the event
+	 * @param event the controller event
 	 */
 	private void processScanBoxEvent(ControlEvent event) {
 		Controller<?> controller = event.getController();
@@ -516,7 +527,7 @@ class ControlPanel extends PApplet {
 	/**
 	 * Processes the scan group events
 	 * 
-	 * @param event the event
+	 * @param event the controller event
 	 */
 	private void processScanEvent(ControlEvent event) {
 		Controller<?> controller = event.getController();
@@ -536,7 +547,7 @@ class ControlPanel extends PApplet {
 	/**
 	 * Processes the slit scan group events
 	 * 
-	 * @param event the event
+	 * @param event the controller event
 	 */
 	private void processSlitScanEvent(ControlEvent event) {
 		Controller<?> controller = event.getController();
@@ -586,14 +597,14 @@ class ControlPanel extends PApplet {
 	/**
 	 * Processes the sculpture group events
 	 * 
-	 * @param event the event
+	 * @param event the controller event
 	 */
 	private void processSculptureEvent(ControlEvent event) {
 		Controller<?> controller = event.getController();
 		String controllerName = controller.getName();
 
 		if (controllerName.equals("sculptureSides")) {
-			// p.sculpt.setSides(sculptureSides);
+			p.sculpt.setSectionSides(Math.round(controller.getValue()));
 		} else if (controllerName.equals("sculptureBang")) {
 			p.takeSculpture = !p.takeSculpture;
 
@@ -603,7 +614,7 @@ class ControlPanel extends PApplet {
 				controller.setCaptionLabel("Restart sculpture");
 			}
 		} else if (controllerName.equals("clearSculpture")) {
-			// p.sculpt.clear();
+			p.sculpt.clear();
 
 			if (!p.takeSculpture) {
 				cp5.getController("sculptureBang").setCaptionLabel("Start sculpture");
@@ -616,7 +627,7 @@ class ControlPanel extends PApplet {
 	/**
 	 * Processes the oder effects group events
 	 * 
-	 * @param event the event
+	 * @param event the controller event
 	 */
 	private void processOderEffectsEvent(ControlEvent event) {
 		Controller<?> controller = event.getController();
@@ -631,9 +642,7 @@ class ControlPanel extends PApplet {
 		} else if (controllerName.equals("handControl")) {
 			p.handControl = ((Toggle) controller).getBooleanValue();
 
-			if (p.handControl) {
-				p.firstTimeControl = true;
-			} else {
+			if (!p.handControl) {
 				p.zoom = p.initZoom;
 				p.rotX = p.initRotX;
 				p.rotY = p.initRotY;

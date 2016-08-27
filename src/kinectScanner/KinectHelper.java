@@ -15,7 +15,7 @@ class KinectHelper {
 	 * This function calculates the initial limits of the scene
 	 */
 
-	public static void calculateLimits(KinectPoints kp) {
+	public static PVector[] calculateLimits(KinectPoints kp) {
 		float xmin = Float.MAX_VALUE;
 		float ymin = Float.MAX_VALUE;
 		float zmin = Float.MAX_VALUE;
@@ -51,6 +51,8 @@ class KinectHelper {
 		ymax += deltaY;
 		zmin -= deltaZ;
 		zmax += deltaZ;
+
+		return new PVector[] { new PVector(xmin, ymin, zmin), new PVector(xmax, ymax, zmax) };
 	}
 
 	/*
