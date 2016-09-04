@@ -8,7 +8,7 @@ import toxi.geom.Vec3D;
  * 
  * @author Javier Graciá Carpio (jagracar)
  */
-class SculptureSection {
+public class SculptureSection {
 
 	/**
 	 * The section center
@@ -26,7 +26,7 @@ class SculptureSection {
 	public Vec3D[] points;
 
 	/**
-	 * Constructor
+	 * Constructs a sculpture section centered on the two given points and perpendicular to their direction
 	 * 
 	 * @param pointBefore the point before the section
 	 * @param pointAfter the point after the section
@@ -42,7 +42,7 @@ class SculptureSection {
 		this.points = new Vec3D[Math.max(2, sides)];
 
 		// Calculate the intersection point between the line defined by the reference point and the reference normal
-		// with the plane defined by the section normal
+		// and the section plane
 		float c = (this.center.dot(this.normal) - referencePoint.dot(this.normal)) / referenceNormal.dot(this.normal);
 		Vec3D intersectionPoint = referenceNormal.scale(c).addSelf(referencePoint);
 
@@ -57,12 +57,12 @@ class SculptureSection {
 	}
 
 	/**
-	 * Paints the filled section on the screen
+	 * Draws the filled section on the screen
 	 * 
 	 * @param p the parent Processing applet
 	 * @param color the color to use
 	 */
-	public void paint(PApplet p, int color) {
+	public void draw(PApplet p, int color) {
 		p.pushStyle();
 		p.noStroke();
 		p.fill(color);

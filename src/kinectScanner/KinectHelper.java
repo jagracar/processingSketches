@@ -5,206 +5,127 @@ import java.util.ArrayList;
 import processing.core.PApplet;
 import processing.core.PVector;
 
-class KinectHelper {
+/**
+ * Helper class containing some useful methods to manipulate scans and slits
+ * 
+ * @author Javier Graciá Carpio (jagracar)
+ */
+public class KinectHelper {
 
+	/**
+	 * This class has no public constructor
+	 */
 	private KinectHelper() {
 
 	}
 
-	/*
-	 * This function calculates the initial limits of the scene
+	/**
+	 * Creates an average scan from a list of scans, assuming that all the scans have the same dimensions
+	 * 
+	 * @param scanList the list of scans to average
+	 * @return the scan average
 	 */
+	public static Scan averageScans(ArrayList<Scan> scanList) {
+		// Create an empty average scan with the same dimensions as the scans in the list
+		Scan averageScan = new Scan(scanList.get(0).width, scanList.get(0).height);
 
-	public static PVector[] calculateLimits(KinectPoints kp) {
-		float xmin = Float.MAX_VALUE;
-		float ymin = Float.MAX_VALUE;
-		float zmin = Float.MAX_VALUE;
-		float xmax = -Float.MAX_VALUE;
-		float ymax = -Float.MAX_VALUE;
-		float zmax = -Float.MAX_VALUE;
+		// Loop over the scans in the list and fill the average scan arrays
+		int[] counter = new int[averageScan.nPoints];
+		int[] red = new int[counter.length];
+		int[] green = new int[counter.length];
+		int[] blue = new int[counter.length];
 
-		for (int i = 0; i < kp.nPoints; i++) {
-			if (kp.visibilityMask[i]) {
-				PVector p = kp.points[i].copy();
-				if (p.x < xmin)
-					xmin = p.x;
-				if (p.x > xmax)
-					xmax = p.x;
-				if (p.y < ymin)
-					ymin = p.y;
-				if (p.y > ymax)
-					ymax = p.y;
-				if (p.z < zmin)
-					zmin = p.z;
-				if (p.z > zmax)
-					zmax = p.z;
+		for (Scan scan : scanList) {
+			averageScan.center.add(scan.center);
+
+			for (int i = 0; i < averageScan.nPoints; i++) {
+				if (scan.visibilityMask[i]) {
+					averageScan.points[i].add(scan.points[i]);
+					int color = scan.colors[i];
+					red[i] += (color >> 16) & 0xff;
+					green[i] += (color >> 8) & 0xff;
+					blue[i] += color & 0xff;
+					counter[i]++;
+				}
 			}
 		}
 
-		// Extend the range a bit
-		float deltaX = 0.1f * (xmax - xmin);
-		float deltaY = 0.1f * (ymax - ymin);
-		float deltaZ = 0.1f * (zmax - zmin);
-		xmin -= deltaX;
-		xmax += deltaX;
-		ymin -= deltaY;
-		ymax += deltaY;
-		zmin -= deltaZ;
-		zmax += deltaZ;
+		averageScan.center.div(scanList.size());
 
-		return new PVector[] { new PVector(xmin, ymin, zmin), new PVector(xmax, ymax, zmax) };
+		for (int i = 0; i < averageScan.nPoints; i++) {
+			if (counter[i] > 0) {
+				averageScan.points[i].div(counter[i]);
+				averageScan.colors[i] = ((red[i] / counter[i]) << 16) | ((green[i] / counter[i]) << 8)
+						| (blue[i] / counter[i]) | 0xff000000;
+				averageScan.visibilityMask[i] = true;
+			}
+		}
+
+		return averageScan;
 	}
 
-	/*
-	 * This function produces an average scan from a list of scans.
-	 *
-	 * Useful to reduce the noise in the data. It produces also some funny/blurry effects if you move while the scans
-	 * are taken.
+	/**
+	 * Creates a scan from the combination of several slits, assuming that all have the same orientation and dimensions
+	 * 
+	 * @param slitList the list of slits to combine
+	 * @param rotate if true the slits will rotated around their center
+	 * @param commonCenter if true all the slits will be moved to have the same center
+	 * @return the scan formed from the combination of the slits
 	 */
+	public static Scan combineSlits(ArrayList<Slit> slitList, boolean rotate, boolean commonCenter) {
+		// Create an empty scan with the same center as the last slit added to the list
+		Slit slit = slitList.get(slitList.size() - 1);
+		boolean verticalSlits = slit.vertical;
+		int width = verticalSlits ? slitList.size() : slit.points.length;
+		int height = verticalSlits ? slit.points.length : slitList.size();
+		Scan scan = new Scan(width, height);
+		scan.center.set(slit.center);
 
-	public static Scan averageScans(PApplet p, ArrayList<Scan> scans) {
-		// Get the first scan to calculate the dimensions of the arrays.
-		// Assumes that all scans have the same dimensions.
-		Scan s0 = (Scan) scans.get(0);
-		int xSize = s0.width;
-		int ySize = s0.height;
-		int nPoints = s0.nPoints;
+		// Loop over the slits in the list and fill the scan arrays
+		for (int i = 0; i < slitList.size(); i++) {
+			slit = slitList.get(i);
+			float offset = (slitList.size() - 1 - i) * 5;
+			float rotationAngle = 4 * (slitList.size() - 1 - i) * PApplet.PI / 180;
+			float cos = PApplet.cos(rotationAngle);
+			float sin = PApplet.sin(rotationAngle);
 
-		PVector[] points = new PVector[nPoints];
-		int[] colors = new int[nPoints];
-		boolean[] constrains = new boolean[nPoints];
-		PVector scanCenter = new PVector();
-		float[] n = new float[nPoints]; // number of points per pixel to average
-		float[] r = new float[nPoints]; // red color
-		float[] g = new float[nPoints]; // green color
-		float[] b = new float[nPoints]; // blue color
+			for (int j = 0; j < slit.points.length; j++) {
+				if (slit.visibilityMask[j]) {
+					int index = verticalSlits ? i + j * width : j + i * width;
+					PVector point = scan.points[index];
+					point.set(slit.points[j]);
 
-		// Initialize the arrays
-		for (int i = 0; i < nPoints; i++) {
-			points[i] = new PVector();
-			constrains[i] = false;
-			n[i] = r[i] = g[i] = b[i] = 0;
-		}
+					// Check if the slit points should be rotated or shifted
+					if (rotate) {
+						point.sub(slit.center);
 
-		// Loop over the scans and add the points and the colors
-		for (int i = 0; i < scans.size(); i++) {
-			Scan s = (Scan) scans.get(i);
-			scanCenter.add(s.scanCenter);
-
-			for (int j = 0; j < nPoints; j++) {
-				if (s.visibilityMask[j]) {
-					points[j].add(s.points[j]);
-					constrains[j] = true;
-					n[j]++;
-					r[j] += p.red(s.colors[j]);
-					g[j] += p.green(s.colors[j]);
-					b[j] += p.blue(s.colors[j]);
-				}
-			}
-		}
-
-		// Divide by the number of scans that contributed to the points
-		scanCenter.div(scans.size());
-
-		for (int i = 0; i < nPoints; i++) {
-			if (constrains[i]) {
-				points[i].div(n[i]);
-				colors[i] = p.color(r[i] / n[i], g[i] / n[i], b[i] / n[i]);
-			}
-		}
-
-		return new Scan(xSize, ySize, points, colors, constrains, scanCenter);
-	}
-
-	/*
-	 * This function combines a list of slits to create a single scan.
-	 */
-
-	public static Scan combineSlits(ArrayList<Slit> slitList, boolean circular, boolean commonCenter) {
-		// Get the last slit to calculate the dimensions of the arrays.
-		// Assumes that all slits have the same dimensions.
-		Slit sLast = (Slit) slitList.get(slitList.size() - 1);
-		boolean vertical = sLast.vertical;
-		PVector scanCenter = sLast.slitCenter.copy();
-
-		int width, height;
-		if (vertical) {
-			width = slitList.size();
-			height = sLast.height;
-		} else {
-			width = sLast.width;
-			height = slitList.size();
-		}
-		int nPoints = width * height;
-		PVector[] points = new PVector[nPoints];
-		int[] colors = new int[nPoints];
-		boolean[] visibilityMask = new boolean[nPoints];
-
-		// Populate the arrays
-		if (vertical) {
-			for (int x = 0; x < width; x++) {
-				Slit s = (Slit) slitList.get(x);
-
-				for (int y = 0; y < height; y++) {
-					int index = x + y * width;
-					points[index] = s.points[y].copy();
-					colors[index] = s.colors[y];
-					visibilityMask[index] = s.visibilityMask[y];
-					if (visibilityMask[index]) {
-						// Rotate along the y axis in case is requested
-						if (circular) {
-							float rot = -4 * (width - x) * PApplet.TWO_PI / 360;
-							points[index].sub(s.slitCenter);
-							points[index].set(PApplet.cos(rot) * points[index].x + PApplet.sin(rot) * points[index].z,
-									points[index].y,
-									-PApplet.sin(rot) * points[index].x + PApplet.cos(rot) * points[index].z);
-							points[index].add(s.slitCenter);
+						if (verticalSlits) {
+							point.set(cos * point.x - sin * point.z, point.y, sin * point.x + cos * point.z);
+						} else {
+							point.set(point.x, cos * point.y - sin * point.z, sin * point.y + cos * point.z);
 						}
-						// Or just shift it in x direction
-						else {
-							points[index].add(new PVector((width - x) * 5, 0, 0));
-						}
-						// Reffer all slits to the same center
-						if (commonCenter) {
-							points[index].sub(s.slitCenter);
-							points[index].add(scanCenter);
+
+						point.add(slit.center);
+					} else {
+						if (verticalSlits) {
+							point.x += offset;
+						} else {
+							point.y += offset;
 						}
 					}
-				}
-			}
-		} else {
-			for (int y = 0; y < height; y++) {
-				Slit s = (Slit) slitList.get(y);
 
-				for (int x = 0; x < width; x++) {
-					int index = x + y * width;
-					points[index] = s.points[x].copy();
-					colors[index] = s.colors[x];
-					visibilityMask[index] = s.visibilityMask[x];
-					if (visibilityMask[index]) {
-						// Rotate along the x axis in case is requested
-						if (circular) {
-							float rot = 4 * (height - y) * PApplet.TWO_PI / 360;
-							points[index].sub(s.slitCenter);
-							points[index].set(points[index].x,
-									PApplet.cos(rot) * points[index].y - PApplet.sin(rot) * points[index].z,
-									PApplet.sin(rot) * points[index].y + PApplet.cos(rot) * points[index].z);
-							points[index].add(s.slitCenter);
-						}
-						// Or just shift it in y direction
-						else {
-							points[index].add(new PVector(0, (height - y) * 5, 0));
-						}
-						// Reffer all slits to the same center
-						if (commonCenter) {
-							points[index].sub(s.slitCenter);
-							points[index].add(scanCenter);
-						}
+					// Check if the slit points should be moved to have the same center
+					if (commonCenter) {
+						point.sub(slit.center);
+						point.add(scan.center);
 					}
+
+					scan.colors[index] = slit.colors[j];
+					scan.visibilityMask[index] = true;
 				}
 			}
 		}
 
-		return new Scan(width, height, points, colors, visibilityMask, scanCenter);
+		return scan;
 	}
 }

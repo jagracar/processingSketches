@@ -28,7 +28,7 @@ public class ScanBox {
 	public float size;
 
 	/**
-	 * Constructor
+	 * Constructs a scan box object
 	 * 
 	 * @param center the box center
 	 * @param size the box size
@@ -39,12 +39,25 @@ public class ScanBox {
 	}
 
 	/**
-	 * Paints the box on the screen
+	 * Checks if a given point is inside the box
+	 * 
+	 * @param point the point to check
+	 * @return true if the point is inside the box
+	 */
+	public boolean isInside(PVector point) {
+		float halfSize = size / 2;
+
+		return Math.abs(point.x - center.x) < halfSize && Math.abs(point.y - center.y) < halfSize
+				&& Math.abs(point.z - center.z) < halfSize;
+	}
+
+	/**
+	 * Draws the box on the screen
 	 * 
 	 * @param p the parent Processing applet
 	 * @param color the color to use
 	 */
-	public void paint(PApplet p, int color) {
+	public void draw(PApplet p, int color) {
 		p.pushStyle();
 		p.noFill();
 		p.stroke(color);
@@ -63,9 +76,10 @@ public class ScanBox {
 	 * Detects a face inside the provided Kinect points and centers the box on the face position
 	 * 
 	 * @param p the parent Processing applet
-	 * @param kp the Kinect points used to detect the face
+	 * @param kp the Kinect points that should be used to detect the face
+	 * @return true if a face was detected and the box position was centered on the face
 	 */
-	public void centerInFace(PApplet p, KinectPoints kp) {
+	public boolean centerInFace(PApplet p, KinectPoints kp) {
 		// Create an image with only the visible points color information
 		PImage img = p.createImage(kp.width, kp.height, PApplet.RGB);
 		img.loadPixels();
@@ -87,6 +101,8 @@ public class ScanBox {
 		System.out.println("Center in face: " + faces.length + " face detected");
 
 		// Check if a face was detected
+		boolean boxCentered = false;
+
 		if (faces.length > 0) {
 			// Get the first face 3D position
 			Rectangle face = faces[0];
@@ -95,14 +111,18 @@ public class ScanBox {
 			int index = x + y * kp.width;
 
 			if (kp.visibilityMask[index]) {
-				center = kp.points[index].copy();
-				center.add(0, 0, 100); // add some offset
+				// Center the box on the face with a small offset in the z direction
+				center.set(kp.points[index]);
+				center.add(0, 0, 100);
 				System.out.println("Center in face: Done (centered in the first face)");
+				boxCentered = true;
 			} else {
 				System.out.println("Center in face: Invalid point. Try again");
 			}
 		} else {
 			System.out.println("Center in face: Nothing done. Try again");
 		}
+
+		return boxCentered;
 	}
 }

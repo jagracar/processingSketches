@@ -5,24 +5,24 @@ import processing.core.PImage;
 import processing.core.PVector;
 
 /**
- * Simple class to manipulate and paint Kinect output data
+ * Class used to manipulate and paint Kinect output data
  * 
  * @author Javier Graciá Carpio (jagracar)
  */
 public class KinectPoints {
 
 	/**
-	 * Maximum separation allowed between two consecutive points to consider them connected
+	 * Maximum separation between two consecutive points to consider them connected
 	 */
-	public static final float MAX_SEP_SQ = 90 * 90;
+	public static final float MAX_SEPARATION_SQ = 90 * 90;
 
 	/**
-	 * Kinect arrays horizontal dimension
+	 * The arrays horizontal dimension
 	 */
 	public int width;
 
 	/**
-	 * Kinect arrays vertical dimension
+	 * The arrays vertical dimension
 	 */
 	public int height;
 
@@ -46,17 +46,33 @@ public class KinectPoints {
 	 */
 	public boolean[] visibilityMask;
 
-	public KinectPoints() {
-		// Empty constructor
+	/**
+	 * Constructs an empty KinectPoints object with the specified dimensions
+	 * 
+	 * @param width the arrays horizontal dimension
+	 * @param height the arrays vertical dimension
+	 */
+	public KinectPoints(int width, int height) {
+		this.width = width;
+		this.height = height;
+		this.nPoints = this.width * this.height;
+		this.points = new PVector[this.nPoints];
+		this.colors = new int[this.nPoints];
+		this.visibilityMask = new boolean[this.nPoints];
+
+		// Initialize the points array
+		for (int i = 0; i < this.nPoints; i++) {
+			this.points[i] = new PVector();
+		}
 	}
 
 	/**
-	 * Constructor
+	 * Constructs a KinectPoints object from the provided Kinect output data
 	 * 
-	 * @param points Kinect 3D points
-	 * @param rgbImg Kinect color image
-	 * @param depthMap Kinect depth map
-	 * @param reductionFactor scale reduction factor
+	 * @param points the Kinect 3D points
+	 * @param rgbImg the Kinect color image
+	 * @param depthMap the Kinect depth map
+	 * @param reductionFactor the scale reduction factor
 	 */
 	public KinectPoints(PVector[] points, PImage rgbImg, int[] depthMap, int reductionFactor) {
 		reductionFactor = Math.max(1, reductionFactor);
@@ -79,85 +95,88 @@ public class KinectPoints {
 				this.visibilityMask[index] = depthMap[indexOriginal] > 0;
 			}
 		}
-	}
 
-	/**
-	 * Constructor
-	 * 
-	 * @param width arrays horizontal dimension
-	 * @param height arrays vertical dimension
-	 * @param points Kinect 3D points
-	 * @param colors Kinect point colors
-	 * @param visibilityMask Kinect points visibility mask
-	 */
-	public KinectPoints(int width, int height, PVector[] points, int[] colors, boolean[] visibilityMask) {
-		this.width = width;
-		this.height = height;
-		this.nPoints = this.width * this.height;
-		this.points = new PVector[this.nPoints];
-		this.colors = new int[this.nPoints];
-		this.visibilityMask = new boolean[this.nPoints];
-
-		// Populate the arrays
-		for (int i = 0; i < this.nPoints; i++) {
-			this.points[i] = points[i].copy();
-			this.colors[i] = colors[i];
-			this.visibilityMask[i] = visibilityMask[i];
-		}
+		rgbImg.updatePixels();
 	}
 
 	/**
 	 * Reduces the Kinect points resolution by a given factor
 	 * 
-	 * @param reductionFactor scale reduction factor
+	 * @param reductionFactor the scale reduction factor
 	 */
 	public void reduceResolution(int reductionFactor) {
 		if (reductionFactor > 1) {
-			// Obtain the dimensions of the reduced arrays
-			int widthRed = width / reductionFactor;
-			int heightRed = height / reductionFactor;
-			int nPointsRed = widthRed * heightRed;
-			PVector[] pointsRed = new PVector[nPointsRed];
-			int[] colorsRed = new int[nPointsRed];
-			boolean[] visibilityMaskRed = new boolean[nPointsRed];
+			// Obtain the dimensions of the new reduced arrays
+			int widthNew = width / reductionFactor;
+			int heightNew = height / reductionFactor;
+			int nPointsNew = widthNew * heightNew;
+			PVector[] pointsNew = new PVector[nPointsNew];
+			int[] colorsNew = new int[nPointsNew];
+			boolean[] visibilityMaskNew = new boolean[nPointsNew];
 
-			// Populate the reduced arrays
-			for (int row = 0; row < heightRed; row++) {
-				for (int col = 0; col < widthRed; col++) {
-					int indexRed = col + row * widthRed;
+			// Populate the arrays
+			for (int row = 0; row < heightNew; row++) {
+				for (int col = 0; col < widthNew; col++) {
+					int indexNew = col + row * widthNew;
 					int index = col * reductionFactor + row * reductionFactor * width;
-					pointsRed[indexRed] = points[index].copy();
-					colorsRed[indexRed] = colors[index];
-					visibilityMaskRed[indexRed] = visibilityMask[index];
+					pointsNew[indexNew] = points[index];
+					colorsNew[indexNew] = colors[index];
+					visibilityMaskNew[indexNew] = visibilityMask[index];
 				}
 			}
 
 			// Update the arrays to the new resolution
-			width = widthRed;
-			height = heightRed;
-			nPoints = nPointsRed;
-			points = pointsRed;
-			colors = colorsRed;
-			visibilityMask = visibilityMaskRed;
+			width = widthNew;
+			height = heightNew;
+			nPoints = nPointsNew;
+			points = pointsNew;
+			colors = colorsNew;
+			visibilityMask = visibilityMaskNew;
 		}
 	}
 
 	/**
-	 * Constrains the points visibilities to a cube delimited by some lower and upper corner coordinates
+	 * Updates the Kinect points with new Kinect data
 	 * 
-	 * @param xMin lower corner x coordinate
-	 * @param xMax upper corner x coordinate
-	 * @param yMin lower corner y coordinate
-	 * @param yMax upper corner y coordinate
-	 * @param zMin lower corner z coordinate
-	 * @param zMax upper corner z coordinate
+	 * @param pointsNew the new Kinect 3D points
+	 * @param rgbImgNew the new Kinect color image
+	 * @param depthMapNew the new Kinect depth map
+	 * @param reductionFactor the scale reduction factor
 	 */
-	public void constrainPoints(float xMin, float xMax, float yMin, float yMax, float zMin, float zMax) {
-		for (int i = 0; i < nPoints; i++) {
-			PVector point = points[i];
-			visibilityMask[i] = visibilityMask[i] && (point.x > xMin) && (point.x < xMax) && (point.y > yMin)
-					&& (point.y < yMax) && (point.z > zMin) && (point.z < zMax);
+	public void update(PVector[] pointsNew, PImage rgbImgNew, int[] depthMapNew, int reductionFactor) {
+		reductionFactor = Math.max(1, reductionFactor);
+		int widthNew = rgbImgNew.width / reductionFactor;
+		int heightNew = rgbImgNew.height / reductionFactor;
+
+		// Check if the arrays resolution has changed
+		if (widthNew != width || heightNew != height) {
+			width = widthNew;
+			height = heightNew;
+			nPoints = width * height;
+			points = new PVector[nPoints];
+			colors = new int[nPoints];
+			visibilityMask = new boolean[nPoints];
+
+			// Initialize the points array
+			for (int i = 0; i < nPoints; i++) {
+				points[i] = new PVector();
+			}
 		}
+
+		// Update the arrays
+		rgbImgNew.loadPixels();
+
+		for (int row = 0; row < height; row++) {
+			for (int col = 0; col < width; col++) {
+				int index = col + row * width;
+				int indexOriginal = col * reductionFactor + row * reductionFactor * rgbImgNew.width;
+				points[index].set(pointsNew[indexOriginal]);
+				colors[index] = rgbImgNew.pixels[indexOriginal];
+				visibilityMask[index] = depthMapNew[indexOriginal] > 0;
+			}
+		}
+
+		rgbImgNew.updatePixels();
 	}
 
 	/**
@@ -166,39 +185,90 @@ public class KinectPoints {
 	 * @param corners an array with the lower and upper corners
 	 */
 	public void constrainPoints(PVector[] corners) {
-		constrainPoints(corners[0].x, corners[1].x, corners[0].y, corners[1].y, corners[0].z, corners[1].z);
+		float xMin = corners[0].x;
+		float yMin = corners[0].y;
+		float zMin = corners[0].z;
+		float xMax = corners[1].x;
+		float yMax = corners[1].y;
+		float zMax = corners[1].z;
+
+		for (int i = 0; i < nPoints; i++) {
+			PVector point = points[i];
+			visibilityMask[i] &= (point.x > xMin) && (point.x < xMax) && (point.y > yMin) && (point.y < yMax)
+					&& (point.z > zMin) && (point.z < zMax);
+		}
 	}
 
 	/**
-	 * Calculates the square of the distance between two points
+	 * Calculates the corner limits that contain all the visible points
 	 * 
-	 * @param point1 first point
-	 * @param point2 second point
-	 * @return the square of the distance between the two points
+	 * @return a points array with the lower and upper corner limits
 	 */
-	private static float distanceSq(PVector point1, PVector point2) {
-		float dx = point1.x - point2.x;
-		float dy = point1.y - point2.y;
-		float dz = point1.z - point2.z;
+	public PVector[] calculateLimits() {
+		float xMin = Float.MAX_VALUE;
+		float yMin = Float.MAX_VALUE;
+		float zMin = Float.MAX_VALUE;
+		float xMax = -Float.MAX_VALUE;
+		float yMax = -Float.MAX_VALUE;
+		float zMax = -Float.MAX_VALUE;
 
-		return dx * dx + dy * dy + dz * dz;
+		for (int i = 0; i < nPoints; i++) {
+			if (visibilityMask[i]) {
+				PVector point = points[i];
+
+				if (point.x < xMin) {
+					xMin = point.x;
+				}
+
+				if (point.x > xMax) {
+					xMax = point.x;
+				}
+
+				if (point.y < yMin) {
+					yMin = point.y;
+				}
+
+				if (point.y > yMax) {
+					yMax = point.y;
+				}
+
+				if (point.z < zMin) {
+					zMin = point.z;
+				}
+
+				if (point.z > zMax) {
+					zMax = point.z;
+				}
+			}
+		}
+
+		// Check that there was at least a visible point
+		if ((xMax - xMin) >= 0) {
+			return new PVector[] { new PVector(xMin, yMin, zMin), new PVector(xMax, yMax, zMax) };
+		} else {
+			return null;
+		}
 	}
 
 	/**
 	 * Returns true if the two points are close enough to be considered connected
 	 * 
-	 * @param point1 first point
-	 * @param point2 second point
+	 * @param point1 the first point
+	 * @param point2 the second point
 	 * @return true if the points can be considered connected
 	 */
 	private static boolean connected(PVector point1, PVector point2) {
-		return KinectPoints.distanceSq(point1, point2) < MAX_SEP_SQ;
+		float dx = point1.x - point2.x;
+		float dy = point1.y - point2.y;
+		float dz = point1.z - point2.z;
+
+		return (dx * dx + dy * dy + dz * dz) < MAX_SEPARATION_SQ;
 	}
 
 	/**
 	 * Draws the Kinect points as pixels on the screen
 	 * 
-	 * @param p the Processing applet
+	 * @param p the parent Processing applet
 	 * @param pixelSize the pixel size
 	 */
 	public void drawAsPixels(PApplet p, int pixelSize) {
@@ -217,9 +287,9 @@ public class KinectPoints {
 	}
 
 	/**
-	 * Draws the Kinect points as pixels on the screen
+	 * Draws the Kinect points as pixels on the screen with a uniform color
 	 * 
-	 * @param p the Processing applet
+	 * @param p the parent Processing applet
 	 * @param pixelSize the pixel size
 	 * @param pixelColor the pixel color
 	 */
@@ -241,14 +311,21 @@ public class KinectPoints {
 	/**
 	 * Draws the Kinect points as horizontal bands on the screen
 	 * 
-	 * @param p the Processing applet
+	 * @param p the parent Processing applet
+	 * @param verticalGap the positive vertical gap between bands
 	 */
-	public void drawAsBands(PApplet p) {
+	public void drawAsBands(PApplet p, int verticalGap) {
 		p.pushStyle();
 		p.noStroke();
 		boolean bandStarted = false;
 
-		for (int row = 0; row < height - 1; row++) {
+		for (int row = 0; row < height - 1; row += verticalGap) {
+			// Finish the band if we are starting a new row and the last shape was not closed
+			if (bandStarted) {
+				p.endShape();
+				bandStarted = false;
+			}
+
 			for (int col = 0; col < width; col++) {
 				int index = col + row * width;
 
@@ -291,12 +368,6 @@ public class KinectPoints {
 						p.fill(colors[index]);
 						p.vertex(point.x, point.y, point.z);
 					}
-
-					// Finish the band if it is the last point in the row
-					if (col == width - 1) {
-						p.endShape();
-						bandStarted = false;
-					}
 				} else if (bandStarted) {
 					// The point is not valid, let's see if we can use the lower point for the last point in the band
 					int lowerIndex = index + width;
@@ -317,22 +388,34 @@ public class KinectPoints {
 			}
 		}
 
+		// Finish the band if the last shape was not closed
+		if (bandStarted) {
+			p.endShape();
+		}
+
 		p.popStyle();
 	}
 
 	/**
-	 * Draws the Kinect points as horizontal bands on the screen
+	 * Draws the Kinect points as horizontal bands on the screen with a uniform color
 	 * 
-	 * @param p the Processing applet
+	 * @param p the parent Processing applet
+	 * @param verticalGap the positive vertical gap between bands
 	 * @param bandsColor the bands color
 	 */
-	public void drawAsBands(PApplet p, int bandsColor) {
+	public void drawAsBands(PApplet p, int verticalGap, int bandsColor) {
 		p.pushStyle();
 		p.noStroke();
 		p.fill(bandsColor);
 		boolean bandStarted = false;
 
-		for (int row = 0; row < height - 1; row++) {
+		for (int row = 0; row < height - 1; row += verticalGap) {
+			// Finish the band if we are starting a new row and the last shape was not closed
+			if (bandStarted) {
+				p.endShape();
+				bandStarted = false;
+			}
+
 			for (int col = 0; col < width; col++) {
 				int index = col + row * width;
 
@@ -370,12 +453,6 @@ public class KinectPoints {
 					} else {
 						p.vertex(point.x, point.y, point.z);
 					}
-
-					// Finish the band if it is the last point in the row
-					if (col == width - 1) {
-						p.endShape();
-						bandStarted = false;
-					}
 				} else if (bandStarted) {
 					// The point is not valid, let's see if we can use the lower point for the last point in the band
 					int lowerIndex = index + width;
@@ -395,13 +472,18 @@ public class KinectPoints {
 			}
 		}
 
+		// Finish the band if the last shape was not closed
+		if (bandStarted) {
+			p.endShape();
+		}
+
 		p.popStyle();
 	}
 
 	/**
 	 * Draws a line between two Kinect points if they are connected
 	 * 
-	 * @param p the Processing applet
+	 * @param p the parent Processing applet
 	 * @param point1 the first point
 	 * @param point2 the second point
 	 * @param lineColor the line color
@@ -414,54 +496,22 @@ public class KinectPoints {
 	}
 
 	/**
-	 * Draws a triangle between three Kinect points if they are connected
+	 * Draws a line between two Kinect points if they are connected
 	 * 
-	 * @param p the Processing applet
+	 * @param p the parent Processing applet
 	 * @param point1 the first point
 	 * @param point2 the second point
-	 * @param point3 the third point
 	 */
-	private void drawTriangle(PApplet p, PVector point1, PVector point2, PVector point3) {
-		if (KinectPoints.connected(point1, point2) && KinectPoints.connected(point1, point3)
-				&& KinectPoints.connected(point2, point3)) {
-			p.beginShape(PApplet.TRIANGLES);
-			p.vertex(point1.x, point1.y, point1.z);
-			p.vertex(point2.x, point2.y, point2.z);
-			p.vertex(point3.x, point3.y, point3.z);
-			p.endShape();
-		}
-	}
-
-	/**
-	 * Draws a triangle between three Kinect points if they are connected
-	 * 
-	 * @param p the Processing applet
-	 * @param point1 the first point
-	 * @param point2 the second point
-	 * @param point3 the third point
-	 * @param color1 the first point color
-	 * @param color2 the second point color
-	 * @param color3 the third point color
-	 */
-	private void drawTriangle(PApplet p, PVector point1, PVector point2, PVector point3, int color1, int color2,
-			int color3) {
-		if (KinectPoints.connected(point1, point2) && KinectPoints.connected(point1, point3)
-				&& KinectPoints.connected(point2, point3)) {
-			p.beginShape(PApplet.TRIANGLES);
-			p.fill(color1);
-			p.vertex(point1.x, point1.y, point1.z);
-			p.fill(color2);
-			p.vertex(point2.x, point2.y, point2.z);
-			p.fill(color3);
-			p.vertex(point3.x, point3.y, point3.z);
-			p.endShape();
+	private void drawLine(PApplet p, PVector point1, PVector point2) {
+		if (KinectPoints.connected(point1, point2)) {
+			p.line(point1.x, point1.y, point1.z, point2.x, point2.y, point2.z);
 		}
 	}
 
 	/**
 	 * Draws the Kinect points as lines on the screen
 	 * 
-	 * @param p the Processing applet
+	 * @param p the parent Processing applet
 	 */
 	public void drawAsLines(PApplet p) {
 		p.pushStyle();
@@ -494,9 +544,90 @@ public class KinectPoints {
 	}
 
 	/**
+	 * Draws the Kinect points as lines on the screen with a uniform color
+	 * 
+	 * @param p the parent Processing applet
+	 * @param lineColor the line color
+	 */
+	public void drawAsLines(PApplet p, int lineColor) {
+		p.pushStyle();
+		p.strokeWeight(1);
+		p.stroke(lineColor);
+
+		for (int row = 0; row < height - 1; row++) {
+			for (int col = 0; col < width - 1; col++) {
+				int index = col + row * width;
+
+				if (visibilityMask[index]) {
+					PVector point = points[index];
+
+					if (visibilityMask[index + 1]) {
+						drawLine(p, point, points[index + 1]);
+					}
+
+					if (visibilityMask[index + width]) {
+						drawLine(p, point, points[index + width]);
+					}
+
+					if (visibilityMask[index + 1 + width]) {
+						drawLine(p, point, points[index + 1 + width]);
+					}
+				}
+			}
+		}
+
+		p.popStyle();
+	}
+
+	/**
+	 * Draws a triangle between three Kinect points if they are connected
+	 * 
+	 * @param p the parent Processing applet
+	 * @param point1 the first point
+	 * @param point2 the second point
+	 * @param point3 the third point
+	 */
+	private void drawTriangle(PApplet p, PVector point1, PVector point2, PVector point3) {
+		if (KinectPoints.connected(point1, point2) && KinectPoints.connected(point1, point3)
+				&& KinectPoints.connected(point2, point3)) {
+			p.beginShape(PApplet.TRIANGLES);
+			p.vertex(point1.x, point1.y, point1.z);
+			p.vertex(point2.x, point2.y, point2.z);
+			p.vertex(point3.x, point3.y, point3.z);
+			p.endShape();
+		}
+	}
+
+	/**
+	 * Draws a triangle between three Kinect points if they are connected
+	 * 
+	 * @param p the parent Processing applet
+	 * @param point1 the first point
+	 * @param point2 the second point
+	 * @param point3 the third point
+	 * @param color1 the first point color
+	 * @param color2 the second point color
+	 * @param color3 the third point color
+	 */
+	private void drawTriangle(PApplet p, PVector point1, PVector point2, PVector point3, int color1, int color2,
+			int color3) {
+		if (KinectPoints.connected(point1, point2) && KinectPoints.connected(point1, point3)
+				&& KinectPoints.connected(point2, point3)) {
+			p.beginShape(PApplet.TRIANGLES);
+			p.fill(color1);
+			p.vertex(point1.x, point1.y, point1.z);
+			p.fill(color2);
+			p.vertex(point2.x, point2.y, point2.z);
+			p.fill(color3);
+			p.vertex(point3.x, point3.y, point3.z);
+			p.endShape();
+		}
+	}
+
+	/**
 	 * Draws the Kinect points as triangles on the screen
 	 * 
-	 * @param p the Processing applet
+	 * @param p the parent Processing applet
 	 */
 	public void drawAsTriangles(PApplet p) {
 		p.pushStyle();
@@ -534,9 +665,9 @@ public class KinectPoints {
 	}
 
 	/**
-	 * Draws the Kinect points as triangles on the screen
+	 * Draws the Kinect points as triangles on the screen with a uniform color
 	 * 
-	 * @param p the Processing applet
+	 * @param p the parent Processing applet
 	 * @param trianglesColor the triangles color
 	 */
 	public void drawAsTriangles(PApplet p, int trianglesColor) {

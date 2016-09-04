@@ -13,37 +13,106 @@ import controlP5.Toggle;
 import processing.core.PApplet;
 
 /**
- * Kinect control panel
- * 
- * Allows the manipulation of some sketch parameters
+ * Class used to display and control the main Kinect sketch variables
  * 
  * @author Javier Graciá Carpio (jagracar)
  */
 class KinectControlPanel extends PApplet {
 
+	/**
+	 * The main ControlP5 object
+	 */
 	private ControlP5 cp5;
+
+	/**
+	 * The Kinect scanner sketch applet
+	 */
 	private KinectScannerSketch p;
+
+	/**
+	 * The panel horizontal screen position
+	 */
 	private int panelPosX;
+
+	/**
+	 * The panel vertical screen position
+	 */
 	private int panelPosY;
+
+	/**
+	 * The panel window width
+	 */
 	private int panelWidth = 400;
+
+	/**
+	 * The panel window height
+	 */
 	private int panelHeight = 912;
+
+	/**
+	 * The panel window title
+	 */
 	private String panelTitle = "Kinect control panel";
+
+	/**
+	 * The controllers horizontal margin
+	 */
 	private int marginX = 10;
+
+	/**
+	 * The controller vertical margin
+	 */
 	private int marginY = 10;
+
+	/**
+	 * The horizontal separation between controller
+	 */
 	private int deltaX = 110;
+
+	/**
+	 * The vertical separation between controllers
+	 */
 	private int deltaY = 30;
+
+	/**
+	 * The controllers label padding
+	 */
 	private int padding = 10;
+
+	/**
+	 * The controllers group bar height
+	 */
 	private int groupBarHeight = 25;
+
+	/**
+	 * The controllers group background color
+	 */
 	private int groupBackgroundColor = color(255, 40);
+
+	/**
+	 * The buttons size in both dimensions
+	 */
 	private int buttonSize = 15;
+
+	/**
+	 * The slider controllers widht
+	 */
 	private int sliderWidth = 300;
+
+	/**
+	 * The text field controller height
+	 */
 	private int textfieldHeight = 19;
+
+	/**
+	 * And internal counter to control the Kinect points color
+	 */
 	private int colorIterator = 0;
 
 	/**
-	 * Constructor
+	 * Constructs the KinectControlPanel object
 	 * 
-	 * @param p the main Processing sketch applet
+	 * @param p the main Kinect scanner sketch applet
 	 * @param panelPosX the control panel x position
 	 * @param panelPosY the control panel y position
 	 */
@@ -54,14 +123,14 @@ class KinectControlPanel extends PApplet {
 	}
 
 	/**
-	 * Sets the control panel dimensions
+	 * Sets the control panel window dimensions
 	 */
 	public void settings() {
 		size(panelWidth, panelHeight);
 	}
 
 	/**
-	 * Initial setup
+	 * Adds and initialized all the panel controllers
 	 */
 	public void setup() {
 		// Move the control panel to the desired screen position and change the title
@@ -183,7 +252,7 @@ class KinectControlPanel extends PApplet {
 		slider.setPosition(marginX, marginY + deltaY);
 		slider.setSize(sliderWidth, buttonSize);
 		slider.setRange(10, 500);
-		slider.setValue(p.sBox.size);
+		slider.setValue(p.box.size);
 		slider.setCaptionLabel("Size");
 		slider.getCaptionLabel().setPaddingX(padding);
 		slider.setGroup(scanBoxGroup);
@@ -192,7 +261,7 @@ class KinectControlPanel extends PApplet {
 		slider.setPosition(marginX, marginY + 2 * deltaY);
 		slider.setSize(sliderWidth, buttonSize);
 		slider.setRange(p.limits[0].x, p.limits[1].x);
-		slider.setValue(p.sBox.center.x);
+		slider.setValue(p.box.center.x);
 		slider.setCaptionLabel("X pos");
 		slider.getCaptionLabel().setPaddingX(padding);
 		slider.setGroup(scanBoxGroup);
@@ -201,7 +270,7 @@ class KinectControlPanel extends PApplet {
 		slider.setPosition(marginX, marginY + 3 * deltaY);
 		slider.setSize(sliderWidth, buttonSize);
 		slider.setRange(p.limits[0].y, p.limits[1].y);
-		slider.setValue(p.sBox.center.y);
+		slider.setValue(p.box.center.y);
 		slider.setCaptionLabel("Y pos");
 		slider.getCaptionLabel().setPaddingX(padding);
 		slider.setGroup(scanBoxGroup);
@@ -210,7 +279,7 @@ class KinectControlPanel extends PApplet {
 		slider.setPosition(marginX, marginY + 4 * deltaY);
 		slider.setSize(sliderWidth, buttonSize);
 		slider.setRange(p.limits[0].z, p.limits[1].z);
-		slider.setValue(p.sBox.center.z);
+		slider.setValue(p.box.center.z);
 		slider.setCaptionLabel("Z pos");
 		slider.getCaptionLabel().setPaddingX(padding);
 		slider.setGroup(scanBoxGroup);
@@ -334,7 +403,7 @@ class KinectControlPanel extends PApplet {
 		slider.setPosition(marginX, marginY);
 		slider.setSize(sliderWidth - 30, buttonSize);
 		slider.setRange(2, 50);
-		slider.setValue(p.sculptureSides);
+		slider.setValue(p.sculpture.getSectionSides());
 		slider.setNumberOfTickMarks(49);
 		slider.showTickMarks(false);
 		slider.setCaptionLabel("Circular detail");
@@ -370,15 +439,15 @@ class KinectControlPanel extends PApplet {
 		bang.getCaptionLabel().align(ControlP5.RIGHT_OUTSIDE, ControlP5.CENTER).setPaddingX(padding);
 		bang.setGroup(sculptureGroup);
 
-		// Oder effects group controllers
-		Group oderEffectsGroup = cp5.addGroup("oderEffectsGroup");
-		oderEffectsGroup.setPosition(marginX, 6 * (marginY + groupBarHeight) + 5 * marginY + 20 * deltaY);
-		oderEffectsGroup.setSize(panelWidth - 2 * marginX, marginY + deltaY);
-		oderEffectsGroup.setBarHeight(groupBarHeight);
-		oderEffectsGroup.setBackgroundColor(groupBackgroundColor);
-		oderEffectsGroup.setCaptionLabel("Other effects");
-		oderEffectsGroup.getCaptionLabel().align(ControlP5.CENTER, ControlP5.CENTER);
-		oderEffectsGroup.disableCollapse();
+		// Other effects group controllers
+		Group otherEffectsGroup = cp5.addGroup("otherEffectsGroup");
+		otherEffectsGroup.setPosition(marginX, 6 * (marginY + groupBarHeight) + 5 * marginY + 20 * deltaY);
+		otherEffectsGroup.setSize(panelWidth - 2 * marginX, marginY + deltaY);
+		otherEffectsGroup.setBarHeight(groupBarHeight);
+		otherEffectsGroup.setBackgroundColor(groupBackgroundColor);
+		otherEffectsGroup.setCaptionLabel("Other effects");
+		otherEffectsGroup.getCaptionLabel().align(ControlP5.CENTER, ControlP5.CENTER);
+		otherEffectsGroup.disableCollapse();
 
 		toogle = cp5.addToggle("oktoberfest");
 		toogle.setPosition(marginX, marginY);
@@ -386,14 +455,14 @@ class KinectControlPanel extends PApplet {
 		toogle.setValue(p.oktoberfest);
 		toogle.setCaptionLabel("Oktoberfest fun!");
 		toogle.getCaptionLabel().align(ControlP5.RIGHT_OUTSIDE, ControlP5.CENTER).setPaddingX(padding);
-		toogle.setGroup(oderEffectsGroup);
+		toogle.setGroup(otherEffectsGroup);
 
 		bang = cp5.addBang("recenterBang");
 		bang.setPosition(marginX + deltaX, marginY);
 		bang.setSize(buttonSize, buttonSize);
 		bang.setCaptionLabel("Recenter");
 		bang.getCaptionLabel().align(ControlP5.RIGHT_OUTSIDE, ControlP5.CENTER).setPaddingX(padding);
-		bang.setGroup(oderEffectsGroup);
+		bang.setGroup(otherEffectsGroup);
 
 		toogle = cp5.addToggle("handControl");
 		toogle.setPosition(marginX + 2 * deltaX, marginY);
@@ -401,7 +470,7 @@ class KinectControlPanel extends PApplet {
 		toogle.setValue(p.handControl);
 		toogle.setCaptionLabel("Control with the hand");
 		toogle.getCaptionLabel().align(ControlP5.RIGHT_OUTSIDE, ControlP5.CENTER).setPaddingX(padding);
-		toogle.setGroup(oderEffectsGroup);
+		toogle.setGroup(otherEffectsGroup);
 
 		// Add the control listener
 		cp5.addListener(new ControlListener() {
@@ -414,7 +483,7 @@ class KinectControlPanel extends PApplet {
 	}
 
 	/**
-	 * Cleans the control panel screen in each loop
+	 * Cleans the control panel window in each loop
 	 */
 	public void draw() {
 		background(0);
@@ -438,8 +507,8 @@ class KinectControlPanel extends PApplet {
 			processSlitScanEvent(event);
 		} else if (controllerGroupName.equals("sculptureGroup")) {
 			processSculptureEvent(event);
-		} else if (controllerGroupName.equals("oderEffectsGroup")) {
-			processOderEffectsEvent(event);
+		} else if (controllerGroupName.equals("otherEffectsGroup")) {
+			processOtherEffectsEvent(event);
 		}
 	}
 
@@ -454,8 +523,16 @@ class KinectControlPanel extends PApplet {
 
 		if (controllerName.equals("drawBands")) {
 			p.drawBands = ((Toggle) controller).getBooleanValue();
+
+			if (p.drawBands && p.drawPixels) {
+				cp5.getController("drawPixels").setValue(0);
+			}
 		} else if (controllerName.equals("drawPixels")) {
 			p.drawPixels = ((Toggle) controller).getBooleanValue();
+
+			if (p.drawBands && p.drawPixels) {
+				cp5.getController("drawBands").setValue(0);
+			}
 		} else if (controllerName.equals("pointColors")) {
 			colorIterator = colorIterator == 3 ? 0 : colorIterator + 1;
 
@@ -466,17 +543,17 @@ class KinectControlPanel extends PApplet {
 				break;
 			case 1:
 				p.monochrome = true;
-				p.monochromeCol = color(220, 50, 50);
+				p.monochromeColor = color(220, 50, 50);
 				controller.setCaptionLabel("Red");
 				break;
 			case 2:
 				p.monochrome = true;
-				p.monochromeCol = color(50, 220, 50);
+				p.monochromeColor = color(50, 220, 50);
 				controller.setCaptionLabel("Green");
 				break;
 			case 3:
 				p.monochrome = true;
-				p.monochromeCol = color(50, 50, 220);
+				p.monochromeColor = color(50, 50, 220);
 				controller.setCaptionLabel("Blue");
 				break;
 			}
@@ -509,18 +586,21 @@ class KinectControlPanel extends PApplet {
 		if (controllerName.equals("drawBox")) {
 			p.drawBox = ((Toggle) controller).getBooleanValue();
 		} else if (controllerName.equals("centerInFace")) {
-			p.sBox.centerInFace(p, p.kPoints);
-			cp5.getController("xBox").setValue(p.sBox.center.x);
-			cp5.getController("yBox").setValue(p.sBox.center.y);
-			cp5.getController("zBox").setValue(p.sBox.center.z);
+			boolean boxCentered = p.box.centerInFace(p, p.kPoints);
+
+			if (boxCentered) {
+				cp5.getController("xBox").setValue(p.box.center.x);
+				cp5.getController("yBox").setValue(p.box.center.y);
+				cp5.getController("zBox").setValue(p.box.center.z);
+			}
 		} else if (controllerName.equals("boxSize")) {
-			p.sBox.size = controller.getValue();
+			p.box.size = controller.getValue();
 		} else if (controllerName.equals("xBox")) {
-			p.sBox.center.x = controller.getValue();
+			p.box.center.x = controller.getValue();
 		} else if (controllerName.equals("yBox")) {
-			p.sBox.center.y = controller.getValue();
+			p.box.center.y = controller.getValue();
 		} else if (controllerName.equals("zBox")) {
-			p.sBox.center.z = controller.getValue();
+			p.box.center.z = controller.getValue();
 		}
 	}
 
@@ -585,6 +665,7 @@ class KinectControlPanel extends PApplet {
 			p.drawSlitScan = ((Toggle) controller).getBooleanValue();
 		} else if (controllerName.equals("clearSlitScan")) {
 			p.slits.clear();
+			p.slitScan = null;
 
 			if (!p.takeSlitScan) {
 				cp5.getController("slitScanBang").setCaptionLabel("Start slit scan");
@@ -604,7 +685,7 @@ class KinectControlPanel extends PApplet {
 		String controllerName = controller.getName();
 
 		if (controllerName.equals("sculptureSides")) {
-			p.sculpt.setSectionSides(Math.round(controller.getValue()));
+			p.sculpture.setSectionSides(Math.round(controller.getValue()));
 		} else if (controllerName.equals("sculptureBang")) {
 			p.takeSculpture = !p.takeSculpture;
 
@@ -614,7 +695,7 @@ class KinectControlPanel extends PApplet {
 				controller.setCaptionLabel("Restart sculpture");
 			}
 		} else if (controllerName.equals("clearSculpture")) {
-			p.sculpt.clear();
+			p.sculpture.clear();
 
 			if (!p.takeSculpture) {
 				cp5.getController("sculptureBang").setCaptionLabel("Start sculpture");
@@ -625,11 +706,11 @@ class KinectControlPanel extends PApplet {
 	}
 
 	/**
-	 * Processes the oder effects group events
+	 * Processes the other effects group events
 	 * 
 	 * @param event the controller event
 	 */
-	private void processOderEffectsEvent(ControlEvent event) {
+	private void processOtherEffectsEvent(ControlEvent event) {
 		Controller<?> controller = event.getController();
 		String controllerName = controller.getName();
 

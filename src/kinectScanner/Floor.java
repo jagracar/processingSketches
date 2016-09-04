@@ -14,52 +14,62 @@ public class Floor {
 	/**
 	 * The texture used to paint the floor
 	 */
-	private PImage floorTexture;
+	private PImage texture;
 
 	/**
-	 * Constructor
+	 * Constructs a default floor object
 	 * 
 	 * @param p the parent Processing applet
 	 * @param color the floor color
 	 */
 	public Floor(PApplet p, int color) {
-		this.floorTexture = p.createImage(10, 50, PApplet.ARGB);
+		this.texture = p.createImage(10, 50, PApplet.ARGB);
 
 		// Set the texture pixel colors
 		float redColor = p.red(color);
 		float greenColor = p.green(color);
 		float blueColor = p.blue(color);
 
-		this.floorTexture.loadPixels();
+		this.texture.loadPixels();
 
-		for (int y = 0; y < floorTexture.height; y++) {
-			float alpha = 150f * y / floorTexture.height;
+		for (int y = 0; y < texture.height; y++) {
+			float alpha = 150f * y / texture.height;
 			int rowColor = p.color(redColor, greenColor, blueColor, alpha);
 
-			for (int x = 0; x < floorTexture.width; x++) {
-				floorTexture.pixels[x + y * floorTexture.width] = rowColor;
+			for (int x = 0; x < texture.width; x++) {
+				texture.pixels[x + y * texture.width] = rowColor;
 			}
 		}
 
-		this.floorTexture.updatePixels();
+		this.texture.updatePixels();
 	}
 
 	/**
+	 * Constructs a floor object using the provided image
+	 * 
+	 * @param floorImage the image to use to paint the floor
+	 */
+	public Floor(PImage floorImage) {
+		this.texture = floorImage;
+	}
+
+	/**
+	 * Draws the floor on the screen
 	 * 
 	 * @param p the parent Processing sketch
 	 * @param limits the sketch visibility limits
 	 */
-	public void paint(PApplet p, PVector[] limits) {
+	public void draw(PApplet p, PVector[] limits) {
 		float zStart = limits[0].z - 0.25f * (limits[1].z - limits[0].z);
 		float zEnd = limits[1].z + 0.5f * (limits[1].z - limits[0].z);
 
 		p.noStroke();
 		p.beginShape();
-		p.texture(floorTexture);
+		p.texture(texture);
 		p.vertex(limits[0].x, limits[0].y, zEnd, 0, 0);
-		p.vertex(limits[1].x, limits[0].y, zEnd, floorTexture.width, 0);
-		p.vertex(limits[1].x, limits[0].y, zStart, floorTexture.width, floorTexture.height);
-		p.vertex(limits[0].x, limits[0].y, zStart, 0, floorTexture.height);
+		p.vertex(limits[1].x, limits[0].y, zEnd, texture.width, 0);
+		p.vertex(limits[1].x, limits[0].y, zStart, texture.width, texture.height);
+		p.vertex(limits[0].x, limits[0].y, zStart, 0, texture.height);
 		p.endShape();
 	}
 }

@@ -2,134 +2,90 @@ package kinectScanner;
 
 import processing.core.PVector;
 
-/*
- * Slit class
- * Subclass of the KinectPoints class
- *
- * Contains the data points from a vertical or horizontal slit.
+/**
+ * Class used to save the data points from a vertical or horizontal slit
+ * 
+ * @author Javier Graciá Carpio (jagracar)
  */
+public class Slit {
 
-public class Slit extends KinectPoints {
-	public PVector slitCenter;
-	public boolean vertical; // false = horizontal
+	/**
+	 * The minimum point distance with respect to the slit center to consider it as part of the slit
+	 */
+	private static final float MINIMUM_DISTANTE = 5f;
 
-	//
-	// Constructor
-	//
+	/**
+	 * The slit orientation
+	 */
+	public boolean vertical;
 
-	public Slit(KinectPoints kp, ScanBox sb, boolean tempVertical) {
-		super(); // Necessary for the variable definitions
-		slitCenter = sb.center.copy();
-		vertical = tempVertical;
+	/**
+	 * The slit central point position
+	 */
+	public PVector center;
 
-		// Define the dimensions of the arrays
-		if (vertical) {
-			width = 1;
-			height = kp.height;
-		} else {
-			width = kp.width;
-			height = 1;
+	/**
+	 * Array containing the points coordinates
+	 */
+	public PVector[] points;
+
+	/**
+	 * Array containing the points colors
+	 */
+	public int[] colors;
+
+	/**
+	 * Array containing the points visibility mask
+	 */
+	public boolean[] visibilityMask;
+
+	/**
+	 * Constructs a slit of the given orientation centered on the scan box position
+	 * 
+	 * @param kp the KinectPoints object
+	 * @param box the scan box from which the slit will be selected
+	 * @param vertical true if the slit should have a vertical orientation, false for horizontal orientation
+	 */
+	public Slit(KinectPoints kp, ScanBox box, boolean vertical) {
+		this.vertical = vertical;
+		this.center = box.center.copy();
+		this.points = new PVector[this.vertical ? kp.height : kp.width];
+		this.colors = new int[this.points.length];
+		this.visibilityMask = new boolean[this.points.length];
+
+		// Find the slit position in the KinectPoints object
+		int slitPos = -1;
+		float minDistance = MINIMUM_DISTANTE;
+
+		for (int y = 0; y < kp.height; y++) {
+			for (int x = 0; x < kp.width; x++) {
+				int index = x + y * kp.width;
+				PVector point = kp.points[index];
+
+				if (kp.visibilityMask[index] && box.isInside(point)) {
+					float distance = this.vertical ? Math.abs(point.x - this.center.x)
+							: Math.abs(point.y - this.center.y);
+
+					if (distance < minDistance) {
+						slitPos = this.vertical ? x : y;
+						minDistance = distance;
+					}
+				}
+			}
 		}
-		nPoints = width * height;
-		points = new PVector[nPoints];
-		colors = new int[nPoints];
-		visibilityMask = new boolean[nPoints];
 
-		// Populate the arrays
-		if (vertical) {
-			// Find the x coordinate of the vertical slit
-			int slitPos = -1;
-			float minDistance = 1000;
-			float delta = 0.5f * sb.size;
-			for (int y = 0; y < kp.height; y++) {
-				for (int x = 0; x < kp.width; x++) {
-					int index = x + y * kp.width;
-					boolean cond = kp.visibilityMask[index] && (kp.points[index].x > (slitCenter.x - delta))
-							&& (kp.points[index].x < (slitCenter.x + delta))
-							&& (kp.points[index].y > (slitCenter.y - delta))
-							&& (kp.points[index].y < (slitCenter.y + delta))
-							&& (kp.points[index].z > (slitCenter.z - delta))
-							&& (kp.points[index].z < (slitCenter.z + delta));
-					if (cond) {
-						float distance = Math.abs(kp.points[index].x - slitCenter.x);
-						if ((distance < minDistance) && (distance < 5)) {
-							slitPos = x;
-							minDistance = distance;
-						}
-					}
-				}
-			}
-			// Populate the vertical slit
-			for (int y = 0; y < height; y++) {
-				if (slitPos >= 0) {
-					int index = slitPos + y * kp.width;
-					boolean cond = kp.visibilityMask[index] && (kp.points[index].x > (slitCenter.x - delta))
-							&& (kp.points[index].x < (slitCenter.x + delta))
-							&& (kp.points[index].y > (slitCenter.y - delta))
-							&& (kp.points[index].y < (slitCenter.y + delta))
-							&& (kp.points[index].z > (slitCenter.z - delta))
-							&& (kp.points[index].z < (slitCenter.z + delta));
-					if (cond) {
-						points[y] = kp.points[index].copy();
-						colors[y] = kp.colors[index];
-						visibilityMask[y] = kp.visibilityMask[index];
-					} else {
-						points[y] = new PVector();
-						colors[y] = 0;
-						visibilityMask[y] = false;
-					}
-				} else {
-					points[y] = new PVector();
-					colors[y] = 0;
-					visibilityMask[y] = false;
-				}
-			}
-		} else {
-			// Find the y coordinate of the horizontal slit
-			int slitPos = -1;
-			float minDistance = 1000;
-			float delta = 0.5f * sb.size;
-			for (int y = 0; y < kp.height; y++) {
-				for (int x = 0; x < kp.width; x++) {
-					int index = x + y * kp.width;
-					boolean cond = kp.visibilityMask[index] && (kp.points[index].x > (slitCenter.x - delta))
-							&& (kp.points[index].x < (slitCenter.x + delta))
-							&& (kp.points[index].y > (slitCenter.y - delta))
-							&& (kp.points[index].y < (slitCenter.y + delta))
-							&& (kp.points[index].z > (slitCenter.z - delta))
-							&& (kp.points[index].z < (slitCenter.z + delta));
-					if (cond) {
-						float distance = Math.abs(kp.points[index].y - slitCenter.y);
-						if ((distance < minDistance) && (distance < 5)) {
-							slitPos = y;
-							minDistance = distance;
-						}
-					}
-				}
-			}
-			// Populate the horizontal slit
-			for (int x = 0; x < width; x++) {
-				if (slitPos >= 0) {
-					int index = x + slitPos * kp.width;
-					boolean cond = kp.visibilityMask[index] && (kp.points[index].x > (slitCenter.x - delta))
-							&& (kp.points[index].x < (slitCenter.x + delta))
-							&& (kp.points[index].y > (slitCenter.y - delta))
-							&& (kp.points[index].y < (slitCenter.y + delta))
-							&& (kp.points[index].z > (slitCenter.z - delta))
-							&& (kp.points[index].z < (slitCenter.z + delta));
-					if (cond) {
-						points[x] = kp.points[index].copy();
-						colors[x] = kp.colors[index];
-						visibilityMask[x] = kp.visibilityMask[index];
-					} else {
-						points[x] = new PVector();
-						colors[x] = 0;
-						visibilityMask[x] = false;
-					}
-				} else {
-					points[x] = new PVector();
-					colors[x] = 0;
-					visibilityMask[x] = false;
+		// Populate the slit arrays
+		for (int i = 0; i < this.points.length; i++) {
+			this.points[i] = new PVector();
+
+			if (slitPos >= 0) {
+				int index = this.vertical ? slitPos + i * kp.width : i + slitPos * kp.width;
+				PVector point = kp.points[index];
+
+				if (kp.visibilityMask[index] && box.isInside(point)) {
+					this.points[i].set(point);
+					this.colors[i] = kp.colors[index];
+					this.visibilityMask[i] = kp.visibilityMask[index];
 				}
 			}
 		}

@@ -11,16 +11,35 @@ import processing.core.PVector;
  */
 public class MovingImg {
 
+	/**
+	 * The image array
+	 */
 	private PImage img;
+
+	/**
+	 * The image position
+	 */
 	public PVector position;
+
+	/**
+	 * The image velocity
+	 */
 	public PVector velocity;
+
+	/**
+	 * The image rotation angle
+	 */
 	public float angle;
+
+	/**
+	 * The image visibility
+	 */
 	public boolean visible;
 
 	/**
-	 * Constructor
+	 * Constructs a MovingImg object
 	 * 
-	 * @param img the image
+	 * @param img the image array
 	 */
 	public MovingImg(PImage img) {
 		this.img = img;
@@ -31,7 +50,7 @@ public class MovingImg {
 	}
 
 	/**
-	 * Updates the image position
+	 * Updates the image position adding the image velocity
 	 */
 	public void update() {
 		position.add(velocity);
@@ -40,18 +59,18 @@ public class MovingImg {
 	/**
 	 * Checks if the image is close to a given position
 	 * 
-	 * @param pos the position to check
+	 * @param positionToCheck the position to check
 	 */
-	public boolean closeToPosition(PVector pos) {
-		return position.dist(pos) < 100;
+	public boolean closeToPosition(PVector positionToCheck) {
+		return position.dist(positionToCheck) < 100;
 	}
 
 	/**
-	 * Paints the image on the screen
+	 * Draws the image on the screen if it's declared visible
 	 * 
 	 * @param p the parent Processing applet
 	 */
-	void paint(PApplet p) {
+	public void draw(PApplet p) {
 		if (visible) {
 			p.pushStyle();
 			p.imageMode(PApplet.CENTER);

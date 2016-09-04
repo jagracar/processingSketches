@@ -8,16 +8,16 @@ import toxi.geom.Spline3D;
 import toxi.geom.Vec3D;
 
 /**
- * Class used to store and paint sculptures created with the Kinect
+ * Class used to store and paint sculptures created with the Kinect sensor
  * 
  * @author Javier Graciá Carpio (jagracar)
  */
-class Sculpture {
+public class Sculpture {
 
 	/**
 	 * The minimum distance allowed between two consecutive spline control points
 	 */
-	private static final float MINIMUM_DISTANCE = 50;
+	private static final float MINIMUM_DISTANCE_SQ = 50 * 50;
 
 	/**
 	 * The sculpture section radius
@@ -42,7 +42,7 @@ class Sculpture {
 	/**
 	 * The last control point added to the spline
 	 */
-	private PVector previousPoint;
+	private Vec3D previousPoint;
 
 	/**
 	 * The sections array list
@@ -50,7 +50,7 @@ class Sculpture {
 	private ArrayList<SculptureSection> sections;
 
 	/**
-	 * Constructor
+	 * Constructs an empty sculpture
 	 * 
 	 * @param sectionRadius the sculpture section radius
 	 * @param sectionSides the number of sculpture section sides
@@ -61,7 +61,7 @@ class Sculpture {
 		this.sectionSides = sectionSides;
 		this.nSubdivisions = nSubdivisions;
 		this.spline = new Spline3D();
-		this.previousPoint = new PVector();
+		this.previousPoint = new Vec3D();
 		this.sections = new ArrayList<SculptureSection>();
 	}
 
@@ -71,9 +71,11 @@ class Sculpture {
 	 * @param point the new control point
 	 */
 	public void addControlPoint(PVector point) {
-		if (getNumControlPoints() == 0 || point.dist(previousPoint) > MINIMUM_DISTANCE) {
-			spline.add(point.x, point.y, point.z);
-			previousPoint.set(point);
+		Vec3D toxiPoint = new Vec3D(point.x, point.y, point.z);
+
+		if (getNumControlPoints() == 0 || previousPoint.distanceToSquared(toxiPoint) > MINIMUM_DISTANCE_SQ) {
+			spline.add(toxiPoint);
+			previousPoint.set(toxiPoint);
 
 			// Calculate the sculpture sections
 			calculateSections();
@@ -81,12 +83,26 @@ class Sculpture {
 	}
 
 	/**
-	 * Returns the sculpture spline control points
+	 * Returns the number of control points in the sculpture's spline
 	 * 
 	 * @return the spline control points
 	 */
-	private int getNumControlPoints() {
+	public int getNumControlPoints() {
 		return spline.getPointList().size();
+	}
+
+	/**
+	 * Sets the sculpture section radius
+	 * 
+	 * @param newSectionRadius the new sculpture sections radius
+	 */
+	public void setSectionRadius(float newSectionRadius) {
+		if (sectionRadius != newSectionRadius) {
+			sectionRadius = newSectionRadius;
+
+			// Calculate the sculpture sections
+			calculateSections();
+		}
 	}
 
 	/**
@@ -104,13 +120,31 @@ class Sculpture {
 	}
 
 	/**
+	 * Returns the number of sculpture section radius
+	 * 
+	 * @return the number of sculpture section radius
+	 */
+	public float getSectionRadius() {
+		return sectionRadius;
+	}
+
+	/**
+	 * Returns the number of sculpture section sides
+	 * 
+	 * @return the number of sculpture section sides
+	 */
+	public float getSectionSides() {
+		return sectionSides;
+	}
+
+	/**
 	 * Calculates the sculpture sections between consecutive spline vertices
 	 */
 	private void calculateSections() {
-		if (getNumControlPoints() > 1) {
-			// Clear the sections array
-			sections.clear();
+		// Clear the sections array
+		sections.clear();
 
+		if (getNumControlPoints() > 1) {
 			// Obtain the new sections
 			ArrayList<Vec3D> vertices = (ArrayList<Vec3D>) spline.computeVertices(nSubdivisions);
 			Vec3D refPoint = new Vec3D();
@@ -127,7 +161,7 @@ class Sculpture {
 	}
 
 	/**
-	 * Cleans the sculpture, removing the control points and the sculpture sections
+	 * Clears the sculpture, removing the control points and the sculpture sections
 	 */
 	public void clear() {
 		spline = new Spline3D();
@@ -139,39 +173,41 @@ class Sculpture {
 	 * Centers the sculpture
 	 */
 	public void center() {
-		// Find the center of the sculpture
-		Vec3D sculptureCenter = new Vec3D();
-		ArrayList<Vec3D> controlPoints = (ArrayList<Vec3D>) spline.getPointList();
+		if (getNumControlPoints() > 1) {
+			// Find the center of the sculpture
+			Vec3D sculptureCenter = new Vec3D();
+			ArrayList<Vec3D> controlPoints = (ArrayList<Vec3D>) spline.getPointList();
 
-		for (Vec3D controlPoint : controlPoints) {
-			sculptureCenter.addSelf(controlPoint);
+			for (Vec3D controlPoint : controlPoints) {
+				sculptureCenter.addSelf(controlPoint);
+			}
+
+			sculptureCenter.scaleSelf(1f / controlPoints.size());
+
+			// Update the spline control points
+			for (Vec3D controlPoint : controlPoints) {
+				controlPoint.subSelf(sculptureCenter);
+			}
+
+			previousPoint.subSelf(sculptureCenter);
+
+			// Calculate the sculpture sections
+			calculateSections();
 		}
-
-		sculptureCenter.scaleSelf(1f / controlPoints.size());
-
-		// Update the spline control points
-		for (Vec3D controlPoint : controlPoints) {
-			controlPoint.subSelf(sculptureCenter);
-		}
-
-		previousPoint.sub(sculptureCenter.x, sculptureCenter.y, sculptureCenter.z);
-
-		// Calculate the sculpture sections
-		calculateSections();
 	}
 
 	/**
-	 * Paints the sculpture on the screen
+	 * Draws the sculpture on the screen
 	 * 
 	 * @param p the parent Processing applet
 	 * @param color the sculpture color
 	 */
-	public void paint(PApplet p, int color) {
-		if (sections.size() > 1) {
-			// Paint the front side
-			sections.get(0).paint(p, color);
+	public void draw(PApplet p, int color) {
+		if (sections.size() > 0) {
+			// Draw the front side
+			sections.get(0).draw(p, color);
 
-			// Paint the sculpture surface
+			// Draw the sculpture surface
 			p.pushStyle();
 			p.noStroke();
 			p.fill(color);
@@ -198,8 +234,8 @@ class Sculpture {
 
 			p.popStyle();
 
-			// Paint the back side
-			sections.get(sections.size() - 1).paint(p, color);
+			// Draw the back side
+			sections.get(sections.size() - 1).draw(p, color);
 		}
 	}
 
@@ -218,12 +254,16 @@ class Sculpture {
 
 		for (String line : fileLines) {
 			String[] coordinates = line.split(" ");
-			spline.add(Float.valueOf(coordinates[0]), Float.valueOf(coordinates[1]), Float.valueOf(coordinates[2]));
+
+			if (coordinates.length >= 3) {
+				spline.add(Float.valueOf(coordinates[0]), Float.valueOf(coordinates[1]), Float.valueOf(coordinates[2]));
+			} else {
+				System.out.println("Sculpture class: there was a problem reading the control points from " + fileName);
+			}
 		}
 
 		// Get the last added point
-		Vec3D point = spline.getPointList().get(getNumControlPoints() - 1);
-		previousPoint.set(point.x, point.y, point.z);
+		previousPoint.set(spline.getPointList().get(getNumControlPoints() - 1));
 
 		// Calculate the sculpture sections
 		calculateSections();
@@ -233,19 +273,18 @@ class Sculpture {
 	 * Saves the sculpture control points
 	 * 
 	 * @param p the parent Processing applet
-	 * @param fileName the fine name
+	 * @param fileName the name of the file where the points will be saved
 	 */
 	public void savePoints(PApplet p, String fileName) {
 		// Save sculpture control points in the file
 		ArrayList<Vec3D> controlPoints = (ArrayList<Vec3D>) spline.getPointList();
-		String[] pointsCoordinates = new String[getNumControlPoints()];
+		String[] pointsCoordinates = new String[controlPoints.size()];
 
 		for (int i = 0; i < pointsCoordinates.length; i++) {
-			Vec3D point = (Vec3D) controlPoints.get(i);
+			Vec3D point = controlPoints.get(i);
 			pointsCoordinates[i] = point.x + " " + point.y + " " + point.z;
 		}
 
-		p.saveStrings(fileName + ".sculpt", pointsCoordinates);
-		System.out.println("Sculpture saved in " + fileName + ".sculpt");
+		p.saveStrings(fileName, pointsCoordinates);
 	}
 }

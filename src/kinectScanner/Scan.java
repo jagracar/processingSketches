@@ -4,9 +4,7 @@ import processing.core.PApplet;
 import processing.core.PVector;
 
 /**
- * Subclass of the KinectPoints class
- * 
- * Implements some additional functions to manipulate and save Kinect output data
+ * Subclass of the KinectPoints class. Implements some additional functions to manipulate and save Kinect output data
  * 
  * @author Javier Graciá Carpio (jagracar)
  */
@@ -15,44 +13,35 @@ public class Scan extends KinectPoints {
 	/**
 	 * The scan central coordinates
 	 */
-	public PVector scanCenter;
+	public PVector center;
 
 	/**
-	 * Constructor
+	 * Constructs an empty Scan object with the specified dimensions
 	 * 
-	 * @param width arrays horizontal dimension
-	 * @param height arrays vertical dimension
-	 * @param points Kinect 3D points
-	 * @param colors Kinect point colors
-	 * @param visibilityMask Kinect points visibility mask
-	 * @param scanCenter the scan central coordinates
+	 * @param width the arrays horizontal dimension
+	 * @param height the arrays vertical dimension
 	 */
-	public Scan(int width, int height, PVector[] points, int[] colors, boolean[] visibilityMask, PVector scanCenter) {
-		super(width, height, points, colors, visibilityMask);
-		this.scanCenter = scanCenter.copy();
+	public Scan(int width, int height) {
+		super(width, height);
+		this.center = new PVector();
 	}
 
 	/**
-	 * Constructor
+	 * Constructs a Scan object using the Kinect points inside the scan box
 	 * 
 	 * @param kp the KinectPoints object
-	 * @param box the scan box from which the scan will be selected
+	 * @param box the scan box from which the scan points will be selected
 	 */
 	public Scan(KinectPoints kp, ScanBox box) {
-		this(kp.width, kp.height, kp.points, kp.colors, kp.visibilityMask, box.center);
+		super(kp.width, kp.height);
+		this.center = box.center.copy();
 
-		// Update the visibility mask
-		float xMin = this.scanCenter.x - 0.5f * box.size;
-		float xMax = xMin + box.size;
-		float yMin = this.scanCenter.y - 0.5f * box.size;
-		float yMax = yMin + box.size;
-		float zMin = this.scanCenter.z - 0.5f * box.size;
-		float zMax = zMin + box.size;
-
+		// Update the arrays
 		for (int i = 0; i < this.nPoints; i++) {
-			PVector point = this.points[i];
-			this.visibilityMask[i] = this.visibilityMask[i] && (point.x > xMin) && (point.x < xMax) && (point.y > yMin)
-					&& (point.y < yMax) && (point.z > zMin) && (point.z < zMax);
+			PVector point = kp.points[i];
+			this.points[i].set(point);
+			this.colors[i] = kp.colors[i];
+			this.visibilityMask[i] = kp.visibilityMask[i] && box.isInside(point);
 		}
 	}
 
@@ -62,14 +51,14 @@ public class Scan extends KinectPoints {
 	 * @param rotationAngle the scan rotation angle in radians
 	 */
 	public void rotate(float rotationAngle) {
-		float cos = (float) Math.cos(rotationAngle);
-		float sin = (float) Math.sin(rotationAngle);
+		float cos = PApplet.cos(rotationAngle);
+		float sin = PApplet.sin(rotationAngle);
 
 		for (int i = 0; i < nPoints; i++) {
 			PVector point = points[i];
-			point.sub(scanCenter);
-			point.set(cos * point.x + sin * point.z, point.y, -sin * point.x + cos * point.z);
-			point.add(scanCenter);
+			point.sub(center);
+			point.set(cos * point.x - sin * point.z, point.y, sin * point.x + cos * point.z);
+			point.add(center);
 		}
 	}
 
@@ -107,39 +96,39 @@ public class Scan extends KinectPoints {
 
 		// Check that there was at least one visible data point
 		if (colIni <= colEnd && rowIni <= rowEnd) {
-			// Obtain the dimensions of the cropped arrays
-			int widthCropped = colEnd - colIni + 1;
-			int heightCropped = rowEnd - rowIni + 1;
-			int nPointsCropped = widthCropped * heightCropped;
-			PVector[] pointsCropped = new PVector[nPointsCropped];
-			int[] colorsCropped = new int[nPointsCropped];
-			boolean[] visibilityMaskCropped = new boolean[nPointsCropped];
+			// Obtain the dimensions of the new cropped arrays
+			int widthNew = colEnd - colIni + 1;
+			int heightNew = rowEnd - rowIni + 1;
+			int nPointsNew = widthNew * heightNew;
+			PVector[] pointsNew = new PVector[nPointsNew];
+			int[] colorsNew = new int[nPointsNew];
+			boolean[] visibilityMaskNew = new boolean[nPointsNew];
 
-			// Populate the cropped arrays
-			for (int row = 0; row < heightCropped; row++) {
-				for (int col = 0; col < widthCropped; col++) {
-					int indexCropped = col + row * heightCropped;
+			// Populate the new arrays
+			for (int row = 0; row < heightNew; row++) {
+				for (int col = 0; col < widthNew; col++) {
+					int indexNew = col + row * heightNew;
 					int index = (colIni + col) + (rowIni + row) * width;
-					pointsCropped[indexCropped] = points[index];
-					colorsCropped[indexCropped] = colors[index];
-					visibilityMaskCropped[indexCropped] = visibilityMask[index];
+					pointsNew[indexNew] = points[index];
+					colorsNew[indexNew] = colors[index];
+					visibilityMaskNew[indexNew] = visibilityMask[index];
 				}
 			}
 
 			// Update the arrays to the new dimensions
-			width = widthCropped;
-			height = heightCropped;
-			nPoints = nPointsCropped;
-			points = pointsCropped;
-			colors = colorsCropped;
-			visibilityMask = visibilityMaskCropped;
+			width = widthNew;
+			height = heightNew;
+			nPoints = nPointsNew;
+			points = pointsNew;
+			colors = colorsNew;
+			visibilityMask = visibilityMaskNew;
 		}
 	}
 
 	/**
-	 * Save the Kinect scan points and colors on a file
+	 * Save the scan points and colors on a file
 	 * 
-	 * @param p the Processing applet
+	 * @param p the parent Processing applet
 	 * @param fileName the file name
 	 */
 	public void savePoints(PApplet p, String fileName) {
@@ -156,7 +145,7 @@ public class Scan extends KinectPoints {
 		for (int i = 0; i < nPoints; i++) {
 			if (visibilityMask[i]) {
 				// Center the points coordinates
-				PVector point = PVector.sub(points[i], scanCenter);
+				PVector point = PVector.sub(points[i], center);
 				int col = colors[i];
 				lines[i + 1] = point.x + " " + point.y + " " + point.z + " " + p.red(col) + " " + p.green(col) + " "
 						+ p.blue(col);
@@ -168,6 +157,5 @@ public class Scan extends KinectPoints {
 
 		// Save the data on the file
 		p.saveStrings(fileName, lines);
-		System.out.println("3D points saved in " + fileName);
 	}
 }
