@@ -88,7 +88,6 @@ public class KinectScannerSketch extends PApplet {
 	 */
 	public void settings() {
 		size(1024, 768, P3D);
-		smooth(3);
 	}
 
 	/**
@@ -99,7 +98,7 @@ public class KinectScannerSketch extends PApplet {
 		perspective(radians(45), ((float) width) / ((float) height), 10.0f, 150000.0f);
 
 		// Initialize SimpleOpenNI context
-		context = new SimpleOpenNI(this, SimpleOpenNI.RUN_MODE_MULTI_THREADED);
+		context = new SimpleOpenNI(this);
 		context.setMirror(true);
 		context.enableDepth();
 		context.enableRGB();
@@ -121,7 +120,7 @@ public class KinectScannerSketch extends PApplet {
 		box = new ScanBox(PVector.add(limits[0], limits[1]).mult(0.5f), 400);
 
 		// Initialize the sculpture
-		sculpture = new Sculpture(100f, 30, 2);
+		sculpture = new Sculpture(100f, 30, 10);
 
 		// Initialize the bier object for the Oktoberfest game
 		PImage bierImg = loadImage("src/kinectScanner/mass.png");
@@ -225,7 +224,7 @@ public class KinectScannerSketch extends PApplet {
 		// Draw the kinect points as bands
 		if (drawBands) {
 			if (monochrome) {
-				kPoints.drawAsBands(this, 2, monochromeColor);
+				kPoints.drawAsBands(this, 1, monochromeColor);
 			} else {
 				kPoints.drawAsBands(this, 1);
 			}
@@ -234,9 +233,9 @@ public class KinectScannerSketch extends PApplet {
 		// Draw the kinect points as pixels
 		if (drawPixels) {
 			if (monochrome) {
-				kPoints.drawAsPixels(this, 3, monochromeColor);
+				kPoints.drawAsPixels(this, 2 * resolution, monochromeColor);
 			} else {
-				kPoints.drawAsPixels(this, 3);
+				kPoints.drawAsLines(this, 1);
 			}
 		}
 
@@ -320,7 +319,7 @@ public class KinectScannerSketch extends PApplet {
 			}
 
 			// Draw the sculpture
-			sculpture.draw(this, color(255));
+			sculpture.draw(this, color(230, 100, 100));
 
 			// Draw a small sphere to signal the hand position
 			if (handPosition != null) {
@@ -360,7 +359,7 @@ public class KinectScannerSketch extends PApplet {
 
 				// Move the brezel to a random position if the hand is close enough or it fell too much
 				if ((handPosition != null && brezel.closeToPosition(handPosition))
-						|| (brezel.position.y < limits[0].y + 0.3f * (limits[1].y - limits[0].y))) {
+						|| (brezel.position.y < limits[0].y + 0.1f * (limits[1].y - limits[0].y))) {
 					brezel.position = getRandomPosition();
 				}
 			}
@@ -401,7 +400,7 @@ public class KinectScannerSketch extends PApplet {
 	 * @return the random position
 	 */
 	public PVector getRandomPosition() {
-		return new PVector(random(-500f, 1500f), random(700f, 1000f), random(600f, 2000f));
+		return new PVector(random(limits[0].x, limits[1].x), 0.8f * limits[1].y, random(600f, 2000f));
 	}
 
 	/**

@@ -716,6 +716,10 @@ class KinectControlPanel extends PApplet {
 
 		if (controllerName.equals("oktoberfest")) {
 			p.oktoberfest = ((Toggle) controller).getBooleanValue();
+
+			if (p.oktoberfest && p.handControl) {
+				cp5.getController("handControl").setValue(0);
+			}
 		} else if (controllerName.equals("recenterBang")) {
 			p.zoom = p.initZoom;
 			p.rotX = p.initRotX;
@@ -727,6 +731,10 @@ class KinectControlPanel extends PApplet {
 				p.zoom = p.initZoom;
 				p.rotX = p.initRotX;
 				p.rotY = p.initRotY;
+			}
+
+			if (p.oktoberfest && p.handControl) {
+				cp5.getController("oktoberfest").setValue(0);
 			}
 		}
 	}
