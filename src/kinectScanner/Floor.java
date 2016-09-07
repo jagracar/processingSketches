@@ -23,7 +23,7 @@ public class Floor {
 	 * @param color the floor color
 	 */
 	public Floor(PApplet p, int color) {
-		this.texture = p.createImage(10, 50, PApplet.ARGB);
+		this.texture = p.createImage(10, 150, PApplet.ARGB);
 
 		// Set the texture pixel colors
 		float redColor = p.red(color);
@@ -33,8 +33,7 @@ public class Floor {
 		this.texture.loadPixels();
 
 		for (int y = 0; y < texture.height; y++) {
-			float alpha = 150f * y / texture.height;
-			int rowColor = p.color(redColor, greenColor, blueColor, alpha);
+			int rowColor = p.color(redColor, greenColor, blueColor, Math.min(y, 255));
 
 			for (int x = 0; x < texture.width; x++) {
 				texture.pixels[x + y * texture.width] = rowColor;

@@ -512,10 +512,11 @@ public class KinectPoints {
 	 * Draws the Kinect points as lines on the screen
 	 * 
 	 * @param p the parent Processing applet
+	 * @param lineWeight the line weight
 	 */
-	public void drawAsLines(PApplet p) {
+	public void drawAsLines(PApplet p, float lineWeight) {
 		p.pushStyle();
-		p.strokeWeight(1);
+		p.strokeWeight(lineWeight);
 
 		for (int row = 0; row < height - 1; row++) {
 			for (int col = 0; col < width - 1; col++) {
@@ -547,11 +548,12 @@ public class KinectPoints {
 	 * Draws the Kinect points as lines on the screen with a uniform color
 	 * 
 	 * @param p the parent Processing applet
+	 * @param lineWeight the line weight
 	 * @param lineColor the line color
 	 */
-	public void drawAsLines(PApplet p, int lineColor) {
+	public void drawAsLines(PApplet p, float lineWeight, int lineColor) {
 		p.pushStyle();
-		p.strokeWeight(1);
+		p.strokeWeight(lineWeight);
 		p.stroke(lineColor);
 
 		for (int row = 0; row < height - 1; row++) {

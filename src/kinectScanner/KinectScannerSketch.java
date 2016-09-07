@@ -24,10 +24,12 @@ import processing.event.MouseEvent;
 public class KinectScannerSketch extends PApplet {
 
 	// Sketch control variables
-	public boolean drawBands = true;
-	public boolean drawPixels = false;
+	public boolean drawKinectPoints = true;
+	public boolean drawAsBands = true;
+	public boolean drawAsPixels = false;
+	public boolean drawAsLines = false;
 	public boolean monochrome = false;
-	public int monochromeColor = 200;
+	public int monochromeColor = 255;
 	public int resolution = 2;
 	public PVector[] limits = null;
 	// public PVector[] limits = new PVector[] { new PVector(-1100, -1500, 0), new PVector(1100, 1000, 3300) };
@@ -97,6 +99,9 @@ public class KinectScannerSketch extends PApplet {
 		// Set the sketch perspective
 		perspective(radians(45), ((float) width) / ((float) height), 10.0f, 150000.0f);
 
+		// The 3D perspective should also affect the points and lines
+		hint(ENABLE_STROKE_PERSPECTIVE);
+
 		// Initialize SimpleOpenNI context
 		context = new SimpleOpenNI(this);
 		context.setMirror(true);
@@ -120,7 +125,7 @@ public class KinectScannerSketch extends PApplet {
 		box = new ScanBox(PVector.add(limits[0], limits[1]).mult(0.5f), 400);
 
 		// Initialize the sculpture
-		sculpture = new Sculpture(100f, 30, 10);
+		sculpture = new Sculpture(60f, 30, 10);
 
 		// Initialize the bier object for the Oktoberfest game
 		PImage bierImg = loadImage("src/kinectScanner/mass.png");
@@ -164,7 +169,7 @@ public class KinectScannerSketch extends PApplet {
 		if (backgroundImg != null) {
 			background(backgroundImg);
 		} else {
-			background(150);
+			background(220);
 		}
 
 		// Update the kinect points
@@ -221,21 +226,33 @@ public class KinectScannerSketch extends PApplet {
 			setSceneLights();
 		}
 
-		// Draw the kinect points as bands
-		if (drawBands) {
-			if (monochrome) {
-				kPoints.drawAsBands(this, 1, monochromeColor);
-			} else {
-				kPoints.drawAsBands(this, 1);
+		// Check if the Kinect points should be drawn
+		if (drawKinectPoints) {
+			// Draw the kinect points as bands
+			if (drawAsBands) {
+				if (monochrome) {
+					kPoints.drawAsBands(this, 1, monochromeColor);
+				} else {
+					kPoints.drawAsBands(this, 1);
+				}
 			}
-		}
 
-		// Draw the kinect points as pixels
-		if (drawPixels) {
-			if (monochrome) {
-				kPoints.drawAsPixels(this, 2 * resolution, monochromeColor);
-			} else {
-				kPoints.drawAsLines(this, 1);
+			// Draw the kinect points as pixels
+			if (drawAsPixels) {
+				if (monochrome) {
+					kPoints.drawAsPixels(this, 3, monochromeColor);
+				} else {
+					kPoints.drawAsPixels(this, 3);
+				}
+			}
+
+			// Draw the kinect points as lines
+			if (drawAsLines) {
+				if (monochrome) {
+					kPoints.drawAsLines(this, 3, monochromeColor);
+				} else {
+					kPoints.drawAsLines(this, 3);
+				}
 			}
 		}
 

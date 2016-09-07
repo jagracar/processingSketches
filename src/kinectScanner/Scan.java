@@ -107,7 +107,7 @@ public class Scan extends KinectPoints {
 			// Populate the new arrays
 			for (int row = 0; row < heightNew; row++) {
 				for (int col = 0; col < widthNew; col++) {
-					int indexNew = col + row * heightNew;
+					int indexNew = col + row * widthNew;
 					int index = (colIni + col) + (rowIni + row) * width;
 					pointsNew[indexNew] = points[index];
 					colorsNew[indexNew] = colors[index];

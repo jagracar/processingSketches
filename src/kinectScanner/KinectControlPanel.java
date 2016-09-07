@@ -17,7 +17,7 @@ import processing.core.PApplet;
  * 
  * @author Javier Graciá Carpio (jagracar)
  */
-class KinectControlPanel extends PApplet {
+public class KinectControlPanel extends PApplet {
 
 	/**
 	 * The main ControlP5 object
@@ -47,7 +47,7 @@ class KinectControlPanel extends PApplet {
 	/**
 	 * The panel window height
 	 */
-	private int panelHeight = 912;
+	private int panelHeight = 942;
 
 	/**
 	 * The panel window title
@@ -95,7 +95,7 @@ class KinectControlPanel extends PApplet {
 	private int buttonSize = 15;
 
 	/**
-	 * The slider controllers widht
+	 * The slider controllers width
 	 */
 	private int sliderWidth = 300;
 
@@ -105,9 +105,24 @@ class KinectControlPanel extends PApplet {
 	private int textfieldHeight = 19;
 
 	/**
+	 * And internal counter to control the Kinect points drawing mode
+	 */
+	private int drawingModeIterator = 0;
+
+	/**
+	 * An array with the different drawing mode labels
+	 */
+	private String[] drawingModes = new String[] { "As bands", "As pixels", "As lines" };
+
+	/**
 	 * And internal counter to control the Kinect points color
 	 */
-	private int colorIterator = 0;
+	private int drawingColorIterator = 0;
+
+	/**
+	 * An array with the different drawing color labels
+	 */
+	private String[] drawingColors = new String[] { "Real colors", "Red", "Green", "Blue" };
 
 	/**
 	 * Constructs the KinectControlPanel object
@@ -140,6 +155,10 @@ class KinectControlPanel extends PApplet {
 		// Create the ControlP5 object
 		cp5 = new ControlP5(this);
 
+		// Set the drawing mode and color iterator values
+		drawingModeIterator = p.drawAsBands ? 0 : (p.drawAsPixels ? 1 : 2);
+		drawingColorIterator = 0;
+
 		// General parameters group controllers
 		Group generalGroup = cp5.addGroup("generalGroup");
 		generalGroup.setPosition(marginX, marginY + groupBarHeight);
@@ -150,26 +169,25 @@ class KinectControlPanel extends PApplet {
 		generalGroup.getCaptionLabel().align(ControlP5.CENTER, ControlP5.CENTER);
 		generalGroup.disableCollapse();
 
-		Toggle toogle = cp5.addToggle("drawBands");
+		Toggle toogle = cp5.addToggle("drawKinectPoints");
 		toogle.setPosition(marginX, marginY);
 		toogle.setSize(buttonSize, buttonSize);
-		toogle.setValue(p.drawBands);
-		toogle.setCaptionLabel("Draw bands");
+		toogle.setValue(p.drawKinectPoints);
+		toogle.setCaptionLabel("Draw points");
 		toogle.getCaptionLabel().align(ControlP5.RIGHT_OUTSIDE, ControlP5.CENTER).setPaddingX(padding);
 		toogle.setGroup(generalGroup);
 
-		toogle = cp5.addToggle("drawPixels");
-		toogle.setPosition(marginX + deltaX, marginY);
-		toogle.setSize(buttonSize, buttonSize);
-		toogle.setValue(p.drawPixels);
-		toogle.setCaptionLabel("Draw pixels");
-		toogle.getCaptionLabel().align(ControlP5.RIGHT_OUTSIDE, ControlP5.CENTER).setPaddingX(padding);
-		toogle.setGroup(generalGroup);
+		Bang bang = cp5.addBang("drawingMode");
+		bang.setPosition(marginX + deltaX, marginY);
+		bang.setSize(buttonSize, buttonSize);
+		bang.setCaptionLabel(drawingModes[drawingModeIterator]);
+		bang.getCaptionLabel().align(ControlP5.RIGHT_OUTSIDE, ControlP5.CENTER).setPaddingX(padding);
+		bang.setGroup(generalGroup);
 
-		Bang bang = cp5.addBang("pointColors");
+		bang = cp5.addBang("drawingColors");
 		bang.setPosition(marginX + 2 * deltaX, marginY);
 		bang.setSize(buttonSize, buttonSize);
-		bang.setCaptionLabel("Real colors");
+		bang.setCaptionLabel(drawingColors[drawingColorIterator]);
 		bang.getCaptionLabel().align(ControlP5.RIGHT_OUTSIDE, ControlP5.CENTER).setPaddingX(padding);
 		bang.setGroup(generalGroup);
 
@@ -392,15 +410,26 @@ class KinectControlPanel extends PApplet {
 		// Sculpture group controllers
 		Group sculptureGroup = cp5.addGroup("sculptureGroup");
 		sculptureGroup.setPosition(marginX, 5 * (marginY + groupBarHeight) + 4 * marginY + 17 * deltaY);
-		sculptureGroup.setSize(panelWidth - 2 * marginX, marginY + 3 * deltaY);
+		sculptureGroup.setSize(panelWidth - 2 * marginX, marginY + 4 * deltaY);
 		sculptureGroup.setBarHeight(groupBarHeight);
 		sculptureGroup.setBackgroundColor(groupBackgroundColor);
 		sculptureGroup.setCaptionLabel("Sculpture");
 		sculptureGroup.getCaptionLabel().align(ControlP5.CENTER, ControlP5.CENTER);
 		sculptureGroup.disableCollapse();
 
-		slider = cp5.addSlider("sculptureSides");
+		slider = cp5.addSlider("sculptureRadius");
 		slider.setPosition(marginX, marginY);
+		slider.setSize(sliderWidth - 30, buttonSize);
+		slider.setRange(10, 100);
+		slider.setValue(p.sculpture.getSectionRadius());
+		slider.setNumberOfTickMarks(91);
+		slider.showTickMarks(false);
+		slider.setCaptionLabel("Radius");
+		slider.getCaptionLabel().setPaddingX(padding);
+		slider.setGroup(sculptureGroup);
+
+		slider = cp5.addSlider("sculptureSides");
+		slider.setPosition(marginX, marginY + deltaY);
 		slider.setSize(sliderWidth - 30, buttonSize);
 		slider.setRange(2, 50);
 		slider.setValue(p.sculpture.getSectionSides());
@@ -411,14 +440,14 @@ class KinectControlPanel extends PApplet {
 		slider.setGroup(sculptureGroup);
 
 		bang = cp5.addBang("sculptureBang");
-		bang.setPosition(marginX, marginY + deltaY);
+		bang.setPosition(marginX, marginY + 2*deltaY);
 		bang.setSize(buttonSize, buttonSize);
 		bang.setCaptionLabel("Start sculpture");
 		bang.getCaptionLabel().align(ControlP5.RIGHT_OUTSIDE, ControlP5.CENTER).setPaddingX(padding);
 		bang.setGroup(sculptureGroup);
 
 		toogle = cp5.addToggle("drawSculpture");
-		toogle.setPosition(marginX + deltaX, marginY + deltaY);
+		toogle.setPosition(marginX + deltaX, marginY + 2*deltaY);
 		toogle.setSize(buttonSize, buttonSize);
 		toogle.setValue(p.drawSculpture);
 		toogle.setCaptionLabel("Draw sculpture");
@@ -426,14 +455,14 @@ class KinectControlPanel extends PApplet {
 		toogle.setGroup(sculptureGroup);
 
 		bang = cp5.addBang("clearSculpture");
-		bang.setPosition(marginX + 2 * deltaX, marginY + deltaY);
+		bang.setPosition(marginX + 2 * deltaX, marginY + 2*deltaY);
 		bang.setSize(buttonSize, buttonSize);
 		bang.setCaptionLabel("Clear");
 		bang.getCaptionLabel().align(ControlP5.RIGHT_OUTSIDE, ControlP5.CENTER).setPaddingX(padding);
 		bang.setGroup(sculptureGroup);
 
 		bang = cp5.addBang("saveSculpture");
-		bang.setPosition(marginX, marginY + 2 * deltaY);
+		bang.setPosition(marginX, marginY + 3 * deltaY);
 		bang.setSize(buttonSize, buttonSize);
 		bang.setCaptionLabel("Save sculpture");
 		bang.getCaptionLabel().align(ControlP5.RIGHT_OUTSIDE, ControlP5.CENTER).setPaddingX(padding);
@@ -441,7 +470,7 @@ class KinectControlPanel extends PApplet {
 
 		// Other effects group controllers
 		Group otherEffectsGroup = cp5.addGroup("otherEffectsGroup");
-		otherEffectsGroup.setPosition(marginX, 6 * (marginY + groupBarHeight) + 5 * marginY + 20 * deltaY);
+		otherEffectsGroup.setPosition(marginX, 6 * (marginY + groupBarHeight) + 5 * marginY + 21 * deltaY);
 		otherEffectsGroup.setSize(panelWidth - 2 * marginX, marginY + deltaY);
 		otherEffectsGroup.setBarHeight(groupBarHeight);
 		otherEffectsGroup.setBackgroundColor(groupBackgroundColor);
@@ -521,40 +550,49 @@ class KinectControlPanel extends PApplet {
 		Controller<?> controller = event.getController();
 		String controllerName = controller.getName();
 
-		if (controllerName.equals("drawBands")) {
-			p.drawBands = ((Toggle) controller).getBooleanValue();
+		if (controllerName.equals("drawKinectPoints")) {
+			p.drawKinectPoints = ((Toggle) controller).getBooleanValue();
+		} else if (controllerName.equals("drawingMode")) {
+			drawingModeIterator = drawingModeIterator == 2 ? 0 : drawingModeIterator + 1;
+			controller.setCaptionLabel(drawingModes[drawingModeIterator]);
 
-			if (p.drawBands && p.drawPixels) {
-				cp5.getController("drawPixels").setValue(0);
+			switch (drawingModeIterator) {
+			case 0:
+				p.drawAsBands = true;
+				p.drawAsPixels = false;
+				p.drawAsLines = false;
+				break;
+			case 1:
+				p.drawAsBands = false;
+				p.drawAsPixels = true;
+				p.drawAsLines = false;
+				break;
+			case 2:
+				p.drawAsBands = false;
+				p.drawAsPixels = false;
+				p.drawAsLines = true;
+				break;
 			}
-		} else if (controllerName.equals("drawPixels")) {
-			p.drawPixels = ((Toggle) controller).getBooleanValue();
+		} else if (controllerName.equals("drawingColors")) {
+			drawingColorIterator = drawingColorIterator == 3 ? 0 : drawingColorIterator + 1;
+			controller.setCaptionLabel(drawingColors[drawingColorIterator]);
 
-			if (p.drawBands && p.drawPixels) {
-				cp5.getController("drawBands").setValue(0);
-			}
-		} else if (controllerName.equals("pointColors")) {
-			colorIterator = colorIterator == 3 ? 0 : colorIterator + 1;
-
-			switch (colorIterator) {
+			switch (drawingColorIterator) {
 			case 0:
 				p.monochrome = false;
-				controller.setCaptionLabel("Real colors");
+				p.monochromeColor = p.color(255, 255, 255);
 				break;
 			case 1:
 				p.monochrome = true;
-				p.monochromeColor = color(220, 50, 50);
-				controller.setCaptionLabel("Red");
+				p.monochromeColor = p.color(220, 50, 50);
 				break;
 			case 2:
 				p.monochrome = true;
-				p.monochromeColor = color(50, 220, 50);
-				controller.setCaptionLabel("Green");
+				p.monochromeColor = p.color(50, 220, 50);
 				break;
 			case 3:
 				p.monochrome = true;
-				p.monochromeColor = color(50, 50, 220);
-				controller.setCaptionLabel("Blue");
+				p.monochromeColor = p.color(50, 50, 220);
 				break;
 			}
 		} else if (controllerName.equals("resolution")) {
@@ -684,7 +722,9 @@ class KinectControlPanel extends PApplet {
 		Controller<?> controller = event.getController();
 		String controllerName = controller.getName();
 
-		if (controllerName.equals("sculptureSides")) {
+		if (controllerName.equals("sculptureRadius")) {
+			p.sculpture.setSectionRadius(controller.getValue());
+		} else if (controllerName.equals("sculptureSides")) {
 			p.sculpture.setSectionSides(Math.round(controller.getValue()));
 		} else if (controllerName.equals("sculptureBang")) {
 			p.takeSculpture = !p.takeSculpture;
@@ -694,6 +734,8 @@ class KinectControlPanel extends PApplet {
 			} else {
 				controller.setCaptionLabel("Restart sculpture");
 			}
+		} else if (controllerName.equals("drawSculpture")) {
+			p.drawSculpture = ((Toggle) controller).getBooleanValue();
 		} else if (controllerName.equals("clearSculpture")) {
 			p.sculpture.clear();
 
